@@ -7,3 +7,9 @@
 [submodule "lib/!stm8"]
 	path = lib/!stm8
 	url = https://github.com/bga/_stm8
+[submodule "tools/ntcToTemp/lib/!cpp"]
+	path = tools/ntcToTemp/lib/!cpp
+	url = https://github.com/bga/_cpp
+[submodule "tools/ntcToTemp/lib/!mcu"]
+	path = tools/ntcToTemp/lib/!mcu
+	url = https://github.com/bga/_mcu
