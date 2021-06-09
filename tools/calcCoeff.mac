@@ -1,0 +1,10 @@
+t0: 0;
+r0: 35000;
+
+t1: 36.6;
+r1: 6090;
+
+T0: 273.15;
+temp(t, r, a, b) := 1 / (t + T0) - (a + b * log(r) / log(2));
+data: solve([temp(t0, r0, a, b), temp(t1, r1, a, b)], [a, b]), bfloat;
+data[1][2] * 2 ** 25;
