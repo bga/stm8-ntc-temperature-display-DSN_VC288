@@ -1,0 +1,9 @@
+[submodule "lib/!cpp"]
+	path = lib/!cpp
+	url = https://github.com/bga/_cpp
+[submodule "lib/!mcu"]
+	path = lib/!mcu
+	url = https://github.com/bga/_mcu
+[submodule "lib/!stm8"]
+	path = lib/!stm8
+	url = https://github.com/bga/_stm8
