@@ -41,6 +41,8 @@ eeprom-write: $(TARGET)-eeprom.bin
 	stm8flash -c stlinkv2 -s eeprom -p $(MCU) -w $<
 eeprom-read:
 	stm8flash -c stlinkv2 -s eeprom -p $(MCU) -r $(TARGET)-eeprom.bin
+eeprom-verify:
+	stm8flash -c stlinkv2 -s eeprom -p $(MCU) -v $(TARGET)-eeprom.bin
 
 # serial: $(TARGET).bin
 # 	stm8gal -p /dev/ttyUSB0 -w $(TARGET).bin
