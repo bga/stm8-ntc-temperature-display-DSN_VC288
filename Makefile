@@ -34,6 +34,8 @@ flash-write: $(TARGET)-flash.bin
 	stm8flash -c stlinkv2 -s flash -p $(MCU) -w $<
 flash-read:
 	stm8flash -c stlinkv2 -s flash -p $(MCU) -r $(TARGET)-flash.bin
+flash-verify:
+	stm8flash -c stlinkv2 -s flash -p $(MCU) -v $(TARGET)-flash.bin
 
 eeprom-write: $(TARGET)-eeprom.bin
 	stm8flash -c stlinkv2 -s eeprom -p $(MCU) -w $<
