@@ -16,7 +16,6 @@
 
 //#define ENABLE_STATIC_PRINT
 
-#include <stdint.h>
 #include <string.h>
 // #include <STM8S_StdPeriph_Driver/stm8s.h>
 #include <delay.h>
