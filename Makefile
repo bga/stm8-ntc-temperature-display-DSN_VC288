@@ -33,16 +33,16 @@ size: $(TARGET)-flash.bin
 flash-write: $(TARGET)-flash.bin
 	stm8flash -c stlinkv2 -s flash -p $(MCU) -w $<
 flash-read:
-	stm8flash -c stlinkv2 -s flash -p $(MCU) -r $(TARGET)-flash.bin
+	stm8flash -c stlinkv2 -s flash -p $(MCU) -r $<
 flash-verify:
-	stm8flash -c stlinkv2 -s flash -p $(MCU) -v $(TARGET)-flash.bin
+	stm8flash -c stlinkv2 -s flash -p $(MCU) -v $<
 
 eeprom-write: $(TARGET)-eeprom.bin
 	stm8flash -c stlinkv2 -s eeprom -p $(MCU) -w $<
 eeprom-read:
-	stm8flash -c stlinkv2 -s eeprom -p $(MCU) -r $(TARGET)-eeprom.bin
+	stm8flash -c stlinkv2 -s eeprom -p $(MCU) -r $<
 eeprom-verify:
-	stm8flash -c stlinkv2 -s eeprom -p $(MCU) -v $(TARGET)-eeprom.bin
+	stm8flash -c stlinkv2 -s eeprom -p $(MCU) -v $<
 
 # serial: $(TARGET).bin
 # 	stm8gal -p /dev/ttyUSB0 -w $(TARGET).bin
