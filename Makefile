@@ -20,10 +20,10 @@ $(TARGET): $(SRCS)
 	IarBuild.bat iar-stm8-project/stm8-ntc-temperature-display-DSN_VC288.ewp $(PROFILE)
 
 $(TARGET)-flash.bin: $(TARGET)
-	iar-stm8_dump-flash.sh $(TARGET)
+	tools/iar-stm8_dump-flash.sh $(TARGET)
 
 $(TARGET)-eeprom.bin: $(TARGET)
-	iar-stm8_dump-eeprom.sh $(TARGET)
+	tools/iar-stm8_dump-eeprom.sh $(TARGET)
 
 size: $(TARGET)-flash.bin
 	@echo "----------"
