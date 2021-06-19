@@ -16,9 +16,6 @@
 
 //#define ENABLE_STATIC_PRINT
 
-//# to define xINTn_C macros in stdint.h
-#define __STDC_CONSTANT_MACROS
-
 #include <stdint.h>
 #include <string.h>
 // #include <STM8S_StdPeriph_Driver/stm8s.h>
@@ -148,8 +145,8 @@ typedef U8 U2_6;
 typedef U16 Um9_25;
 
 enum TemperatureType {
-	TemperatureType_celsius, 
-	TemperatureType_fahrenheit, 
+	TemperatureType_celsius,
+	TemperatureType_fahrenheit,
 };
 
 struct Settings {
@@ -177,7 +174,7 @@ STM8S_STDPERIPH_LIB__EEPROM const Settings defaultSettings = {
 	.rDiv = 10000,
 	.displayUpdatePeriod = ticksCountPerSReal  / 2,
 	.tempHysteresis = U2_6(0.045 * (1 << 6)),
-	.temperatureType = TemperatureType_celsius, 
+	.temperatureType = TemperatureType_celsius,
 };
 Settings const& settings = ((Settings*)(&defaultSettings))[0];
 
@@ -331,7 +328,7 @@ BGA__MCU__HAL__ISR(STM8S_STDPERIPH_LIB__TIM4_ISR) {
 			if(settings.tempHysteresis < Math_abs(temp - lastTemp)) {
 				lastTemp = temp;
 				FI16 userTemp = ((FI32(temp) * 10) >> 6);
-				
+
 				userTemp = User_convertTemperature(userTemp);
 
 				displayTemp(userTemp, &(display.displayChars[Config::tempDisplayCharIndex]));
