@@ -352,8 +352,9 @@ void Clock_setCpuFullSpeed() {
 
 void Hw_enable() {
 	using namespace ::STM8S_StdPeriph_Lib;
-	setBitMask(CLK->PCKENR1, CLK_PCKENR1_TIM4);
-	setBitMask(CLK->PCKENR2, CLK_PCKENR2_ADC);
+	//# CLK->PCKENR* by default has all bits set. We need only enable clocking for used peripheral. So direct assignment
+	CLK->PCKENR1 = CLK_PCKENR1_TIM4;
+	CLK->PCKENR2 = CLK_PCKENR2_ADC;
 }
 
 void main() {
