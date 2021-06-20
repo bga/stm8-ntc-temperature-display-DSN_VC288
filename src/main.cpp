@@ -303,9 +303,7 @@ Bool tempAdc_isHwError;
 
 FU8 display_index = 0;
 
-BGA__MCU__HAL__ISR(STM8S_STDPERIPH_LIB__TIM4_ISR) {
-	clearBitMask(::STM8S_StdPeriph_Lib::TIM4->SR1, ::STM8S_StdPeriph_Lib::TIM4_SR1_UIF);
-
+void timerThread() {
 	#if 0
 		displayDecrimal(ticksCount, &(display.displayChars[3]));
 	#endif // 1
@@ -385,6 +383,12 @@ BGA__MCU__HAL__ISR(STM8S_STDPERIPH_LIB__TIM4_ISR) {
 	}
 
 	ticksCount += 1;
+}
+
+BGA__MCU__HAL__ISR(STM8S_STDPERIPH_LIB__TIM4_ISR) {
+	clearBitMask(::STM8S_StdPeriph_Lib::TIM4->SR1, ::STM8S_StdPeriph_Lib::TIM4_SR1_UIF);
+
+	timerThread();
 }
 
 void Clock_setCpuFullSpeed() {
