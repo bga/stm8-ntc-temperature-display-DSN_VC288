@@ -20,6 +20,7 @@
 namespace App { namespace Config {
 	enum { 
 		tempDisplayCharIndex = 0,  
+		hlDisplayDataCharIndex = 3, 
 	};
 
 	enum {

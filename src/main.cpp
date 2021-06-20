@@ -160,6 +160,10 @@ struct Settings {
 	U16 rDiv;
 	U16 displayUpdatePeriod;
 	U2_6 tempHysteresis;
+	struct HLDisplayData {
+		U16 nameDisplayEndTime;
+		U16 valueDisplayEndTime;
+	} hlDisplayData;
 	/* TemperatureType */ U8 temperatureType;
 };
 
@@ -174,6 +178,10 @@ STM8S_STDPERIPH_LIB__EEPROM const Settings defaultSettings = {
 	.displayUpdatePeriod = ticksCountPerSReal  / 2,
 	.tempHysteresis = U2_6(0.045 * (1 << 6)),
 	.temperatureType = TemperatureType_celsius,
+	.hlDisplayData = {
+		.nameDisplayEndTime = msToTicksCount(500UL),
+		.valueDisplayEndTime = msToTicksCount(1500UL),
+	}
 };
 Settings const& settings = ((Settings*)(&defaultSettings))[0];
 
@@ -264,6 +272,22 @@ void displayTemp(FI16 x, FU8* dest) {
 
 }
 
+struct HLDisplayData {
+	const char name[3];
+	FI16 temp;
+} hlDisplayData[6] = {
+	{ { _7SegmentsFont::H, _7SegmentsFont::d1, 0  }, 111 },
+	{ { _7SegmentsFont::L, _7SegmentsFont::d1, 0  }, 222 },
+	{ { _7SegmentsFont::H, _7SegmentsFont::d7, 0  }, 333 },
+	{ { _7SegmentsFont::L, _7SegmentsFont::d7, 0  }, 444 },
+	{ { _7SegmentsFont::H, _7SegmentsFont::d3, _7SegmentsFont::d0 }, 444 },
+	{ { _7SegmentsFont::L, _7SegmentsFont::d3, _7SegmentsFont::d0 }, 667 },
+};
+
+FU16 hlDisplayData_ticksCount = -1;
+FU16 hlDisplayData_index = 0;
+
+
 FI10_6 lastTemp = -1;
 
 
@@ -334,6 +358,24 @@ BGA__MCU__HAL__ISR(STM8S_STDPERIPH_LIB__TIM4_ISR) {
 			};
 		}
 	}
+	#endif
+
+	#if 1
+	if(0 == hlDisplayData_ticksCount) {
+		memcpy(&(display.displayChars[Config::hlDisplayDataCharIndex]), hlDisplayData[hlDisplayData_index].name, sizeof(hlDisplayData[hlDisplayData_index].name));
+	}
+	else if(settings.hlDisplayData.nameDisplayEndTime == hlDisplayData_ticksCount) {
+		FI16 userTemp = hlDisplayData[hlDisplayData_index].temp;
+
+		userTemp = User_convertTemperature(userTemp);
+
+		displayTemp(userTemp, &(display.displayChars[Config::hlDisplayDataCharIndex]));
+	}
+	else if(settings.hlDisplayData.valueDisplayEndTime == hlDisplayData_ticksCount) {
+		cycleInc(hlDisplayData_index, arraySize(hlDisplayData));
+		hlDisplayData_ticksCount = -1;
+	}
+	hlDisplayData_ticksCount += 1;
 	#endif
 
 	if(0) debug {
