@@ -272,16 +272,26 @@ void displayTemp(FI16 x, FU8* dest) {
 
 }
 
+enum {
+	HLDisplayData_h1 = 0,
+	HLDisplayData_l1,
+	HLDisplayData_h7,
+	HLDisplayData_l7,
+	HLDisplayData_h30,
+	HLDisplayData_l30,
+};
+
+
 struct HLDisplayData {
 	const char name[3];
 	FI16 temp;
 } hlDisplayData[6] = {
-	{ { _7SegmentsFont::H, _7SegmentsFont::d1, 0  }, 111 },
-	{ { _7SegmentsFont::L, _7SegmentsFont::d1, 0  }, 222 },
-	{ { _7SegmentsFont::H, _7SegmentsFont::d7, 0  }, 333 },
-	{ { _7SegmentsFont::L, _7SegmentsFont::d7, 0  }, 444 },
-	{ { _7SegmentsFont::H, _7SegmentsFont::d3, _7SegmentsFont::d0 }, 444 },
-	{ { _7SegmentsFont::L, _7SegmentsFont::d3, _7SegmentsFont::d0 }, 667 },
+	[HLDisplayData_h1] = { { _7SegmentsFont::H, _7SegmentsFont::d1, 0  }, 111 },
+	[HLDisplayData_l1] = { { _7SegmentsFont::L, _7SegmentsFont::d1, 0  }, 222 },
+	[HLDisplayData_h7] = { { _7SegmentsFont::H, _7SegmentsFont::d7, 0  }, 333 },
+	[HLDisplayData_l7] = { { _7SegmentsFont::L, _7SegmentsFont::d7, 0  }, 444 },
+	[HLDisplayData_h30] = { { _7SegmentsFont::H, _7SegmentsFont::d3, _7SegmentsFont::d0 }, 444 },
+	[HLDisplayData_l30] = { { _7SegmentsFont::L, _7SegmentsFont::d3, _7SegmentsFont::d0 }, 667 },
 };
 
 FU16 hlDisplayData_ticksCount = -1;
