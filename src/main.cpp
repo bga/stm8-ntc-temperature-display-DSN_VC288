@@ -281,18 +281,24 @@ enum {
 	HLDisplayData_l30,
 };
 
+const FI10_6 HLDisplayData_notFilledMagic = FI10_6(0x8000);
+
 
 struct HLDisplayData {
 	const char name[3];
 	FI16 temp;
 } hlDisplayData[6] = {
-	[HLDisplayData_h1] = { { _7SegmentsFont::H, _7SegmentsFont::d1, 0  }, 111 },
+	[HLDisplayData_h1] = { { _7SegmentsFont::H, _7SegmentsFont::d1, 0  }, HLDisplayData_notFilledMagic },
 	[HLDisplayData_l1] = { { _7SegmentsFont::L, _7SegmentsFont::d1, 0  }, 222 },
 	[HLDisplayData_h7] = { { _7SegmentsFont::H, _7SegmentsFont::d7, 0  }, 333 },
 	[HLDisplayData_l7] = { { _7SegmentsFont::L, _7SegmentsFont::d7, 0  }, 444 },
 	[HLDisplayData_h30] = { { _7SegmentsFont::H, _7SegmentsFont::d3, _7SegmentsFont::d0 }, 444 },
 	[HLDisplayData_l30] = { { _7SegmentsFont::L, _7SegmentsFont::d3, _7SegmentsFont::d0 }, 667 },
 };
+
+inline Bool HLDisplayData_isNotFilled() {
+	return hlDisplayData[HLDisplayData_h1].temp == HLDisplayData_notFilledMagic;
+} 
 
 FU16 hlDisplayData_ticksCount = -1;
 FU16 hlDisplayData_index = 0;
@@ -369,21 +375,26 @@ void timerThread() {
 	#endif
 
 	#if 1
-	if(0 == hlDisplayData_ticksCount) {
-		memcpy(&(display.displayChars[Config::hlDisplayDataCharIndex]), hlDisplayData[hlDisplayData_index].name, sizeof(hlDisplayData[hlDisplayData_index].name));
+	if(HLDisplayData_isNotFilled()) {
+		//# display nothing
 	}
-	else if(settings.hlDisplayData.nameDisplayEndTime == hlDisplayData_ticksCount) {
-		FI16 userTemp = hlDisplayData[hlDisplayData_index].temp;
+	else {
+		if(0 == hlDisplayData_ticksCount) {
+			memcpy(&(display.displayChars[Config::hlDisplayDataCharIndex]), hlDisplayData[hlDisplayData_index].name, sizeof(hlDisplayData[hlDisplayData_index].name));
+		}
+		else if(settings.hlDisplayData.nameDisplayEndTime == hlDisplayData_ticksCount) {
+			FI16 userTemp = hlDisplayData[hlDisplayData_index].temp;
 
-		userTemp = User_convertTemperature(userTemp);
+			userTemp = User_convertTemperature(userTemp);
 
-		displayTemp(userTemp, &(display.displayChars[Config::hlDisplayDataCharIndex]));
+			displayTemp(userTemp, &(display.displayChars[Config::hlDisplayDataCharIndex]));
+		}
+		else if(settings.hlDisplayData.valueDisplayEndTime == hlDisplayData_ticksCount) {
+			cycleInc(hlDisplayData_index, arraySize(hlDisplayData));
+			hlDisplayData_ticksCount = -1;
+		}
+		hlDisplayData_ticksCount += 1;
 	}
-	else if(settings.hlDisplayData.valueDisplayEndTime == hlDisplayData_ticksCount) {
-		cycleInc(hlDisplayData_index, arraySize(hlDisplayData));
-		hlDisplayData_ticksCount = -1;
-	}
-	hlDisplayData_ticksCount += 1;
 	#endif
 
 	if(0) debug {
