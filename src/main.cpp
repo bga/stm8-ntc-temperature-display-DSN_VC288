@@ -375,6 +375,12 @@ void displayThread() {
 }
 
 void measureThread() {
+	struct A {
+		static inline void convertAndDisplayRawTemp(FI16 x, FU8* dest) {
+			displayTemp(User_convertTemperature((FI32(x) * 10) >> 6), dest);
+		}
+	};
+
 	FU16 ticksCount = ticksCountLive;
 
 	#if 0
@@ -416,11 +422,7 @@ void measureThread() {
 
 			if(settings.tempHysteresis < Math_abs(temp - lastTemp)) {
 				lastTemp = temp;
-				FI16 userTemp = ((FI32(temp) * 10) >> 6);
-
-				userTemp = User_convertTemperature(userTemp);
-
-				displayTemp(userTemp, &(display.displayChars[Config::tempDisplayCharIndex]));
+				A::convertAndDisplayRawTemp(temp, &(display.displayChars[Config::tempDisplayCharIndex]));
 			};
 		}
 	}
@@ -435,11 +437,7 @@ void measureThread() {
 			memcpy(&(display.displayChars[Config::hlDisplayDataCharIndex]), hlDisplayData[hlDisplayData_index].name, sizeof(hlDisplayData[hlDisplayData_index].name));
 		}
 		else if(settings.hlDisplayData.nameDisplayEndTime == hlDisplayData_ticksCount) {
-			FI16 userTemp = ((FI32(hlDisplayData[hlDisplayData_index].temp) * 10) >> 6);
-
-			userTemp = User_convertTemperature(userTemp);
-
-			displayTemp(userTemp, &(display.displayChars[Config::hlDisplayDataCharIndex]));
+			A::convertAndDisplayRawTemp(hlDisplayData[hlDisplayData_index].temp, &(display.displayChars[Config::hlDisplayDataCharIndex]));
 		}
 		else if(settings.hlDisplayData.valueDisplayEndTime == hlDisplayData_ticksCount) {
 			// cycleInc(hlDisplayData_index, arraySize(hlDisplayData));
