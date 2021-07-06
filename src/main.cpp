@@ -324,7 +324,7 @@ FU16 hlDisplayData_index = 0;
 FI10_6 lastTemp = -1;
 
 
-FU16 ticksCount = 0;
+FU16 ticksCountLive = 0;
 FU16 displayTicksCount = 0;
 
 
@@ -337,10 +337,12 @@ Bool tempAdc_isHwError;
 FU8 display_index = 0;
 
 void sysClockThread() {
-	ticksCount += 1;
+	ticksCountLive += 1;
 }
 
 void displayThread() {
+	FU16 ticksCount = ticksCountLive;
+
 	#if 1
 	display.updateManual(display_index);
 	cycleInc(display_index, 6);
@@ -348,6 +350,8 @@ void displayThread() {
 }
 
 void measureThread() {
+	FU16 ticksCount = ticksCountLive;
+
 	#if 0
 		displayDecrimal(ticksCount, &(display.displayChars[3]));
 	#endif // 1
@@ -452,6 +456,7 @@ void Hw_enable() {
 	CLK->PCKENR1 = CLK_PCKENR1_TIM2 | CLK_PCKENR1_TIM4;
 	CLK->PCKENR2 = CLK_PCKENR2_ADC;
 }
+
 
 void main() {
 
