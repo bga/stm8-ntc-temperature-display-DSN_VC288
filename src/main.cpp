@@ -60,33 +60,37 @@ enum {
 	UserError_badEeprom = 0,
 };
 
-enum {
-	clockDivider = 0,
-	ticksCountPerSAprox = 1600UL,
+template<UIntMax ticksCountPerSAproxArg, UInt prescalerMaxArg> struct TimerCalc_8bit {
+	enum {
+		ticksCountPerSAprox = ticksCountPerSAproxArg,
+		prescalerMax = prescalerMaxArg,
 
-	TIM4_prescaler = 7,
-	TIM4_arr = F_CPU / (1UL << clockDivider ) / (1UL << TIM4_prescaler) / ticksCountPerSAprox,
-//	TIM4_arr = F_CPU / (1UL << clockDivider ) / 2UL / ((1UL << TIM4_prescaler) - 1) / ticksCountPerSAprox,
+		_2PowPrescalerAprox = F_CPU / ticksCountPerSAprox / (1UL << 8),
+		prescalerPossibleMax = log2Static(_2PowPrescalerAprox),
+		prescaler = BGA__MATH__MIN(prescalerPossibleMax, prescalerMax),
 
-	ticksCountPerSReal = F_CPU / (1UL << clockDivider ) / (1UL << TIM4_prescaler) / TIM4_arr,
-//	ticksCountPerSReal = F_CPU / (1UL << clockDivider ) / 2UL / ((1UL << TIM4_prescaler) - 1) / TIM4_arr
+		arr = F_CPU / (1UL << prescaler) / ticksCountPerSAprox,
+		ticksCountPerSReal = F_CPU / (1UL << prescaler) / arr,
+	};
+
+	static_assert_lt(0, arr);
+	static_assert_lte(arr, (1UL << 8) - 1);
 };
 
-static_assert_lt(0, TIM4_arr);
-static_assert_lte(TIM4_arr, 255);
+typedef TimerCalc_8bit<1600UL, (1UL << 3) - 1> Tim4Calc;
 
-#define msToTicksCount(msArg) (ticksCountPerSReal * (msArg) / 1000UL)
+#define msToTicksCount(msArg) (Tim4Calc::ticksCountPerSReal * (msArg) / 1000UL)
 
-void Timer_init() {
+
+void Timer4_init() {
 	using namespace ::STM8S_StdPeriph_Lib;
-	TIM4->PSCR = TIM4_prescaler;
+	TIM4->PSCR = Tim4Calc::prescaler;
 
-	TIM4->ARR = TIM4_arr;
+	TIM4->ARR = Tim4Calc::arr;
 
 	setBitMask(TIM4->IER, TIM4_IER_UIE); // Enable Update Interrupt
 	setBitMask(TIM4->CR1, TIM4_CR1_CEN); // Enable TIM4
 }
-
 
 #if 1
 template<class IntAtg>
@@ -175,7 +179,7 @@ STM8S_STDPERIPH_LIB__EEPROM const Settings defaultSettings = {
 		}
 	},
 	.rDiv = 10000,
-	.displayUpdatePeriod = ticksCountPerSReal  / 2,
+	.displayUpdatePeriod = msToTicksCount(500UL),
 	.tempHysteresis = U2_6(0.045 * (1 << 6)),
 	.temperatureType = TemperatureType_celsius,
 	.hlDisplayData = {
@@ -298,7 +302,7 @@ struct HLDisplayData {
 
 inline Bool HLDisplayData_isNotFilled() {
 	return hlDisplayData[HLDisplayData_h1].temp == HLDisplayData_notFilledMagic;
-} 
+}
 
 FU16 hlDisplayData_ticksCount = -1;
 FU16 hlDisplayData_index = 0;
@@ -397,6 +401,7 @@ void timerThread() {
 	}
 	#endif
 
+
 	if(0) debug {
 		if((ticksCount & bitsCountToMask(7)) == 0) {
 			display.displayChars[0] ^= _7SegmentsFont::dot;
@@ -447,7 +452,7 @@ void main() {
 	Config::tempAdcGpioPort.init();
 	Config::tempAdcGpioVccPort.init();
 
-	Timer_init();
+	Timer4_init();
 	::STM8S_StdPeriph_Lib::enableInterrupts();
 
 	while(1) {
