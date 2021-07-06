@@ -435,7 +435,7 @@ void measureThread() {
 			memcpy(&(display.displayChars[Config::hlDisplayDataCharIndex]), hlDisplayData[hlDisplayData_index].name, sizeof(hlDisplayData[hlDisplayData_index].name));
 		}
 		else if(settings.hlDisplayData.nameDisplayEndTime == hlDisplayData_ticksCount) {
-			FI16 userTemp = hlDisplayData[hlDisplayData_index].temp;
+			FI16 userTemp = ((FI32(hlDisplayData[hlDisplayData_index].temp) * 10) >> 6);
 
 			userTemp = User_convertTemperature(userTemp);
 
