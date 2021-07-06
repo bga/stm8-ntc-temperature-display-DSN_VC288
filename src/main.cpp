@@ -60,12 +60,13 @@ enum {
 	UserError_badEeprom = 0,
 };
 
-template<UIntMax ticksCountPerSAproxArg, UInt prescalerMaxArg> struct TimerCalc_8bit {
+template<UIntMax ticksCountPerSAproxArg, UInt arrMaxArg, UInt prescalerMaxArg> struct TimerCalc {
 	enum {
 		ticksCountPerSAprox = ticksCountPerSAproxArg,
+		arrMax = arrMaxArg,
 		prescalerMax = prescalerMaxArg,
 
-		_2PowPrescalerAprox = F_CPU / ticksCountPerSAprox / (1UL << 8),
+		_2PowPrescalerAprox = F_CPU / ticksCountPerSAprox / arrMax,
 		prescalerPossibleMax = log2Static(_2PowPrescalerAprox),
 		prescaler = BGA__MATH__MIN(prescalerPossibleMax, prescalerMax),
 
@@ -74,27 +75,11 @@ template<UIntMax ticksCountPerSAproxArg, UInt prescalerMaxArg> struct TimerCalc_
 	};
 
 	static_assert_lt(0, arr);
-	static_assert_lte(arr, (1UL << 8) - 1);
-};
-template<UIntMax ticksCountPerSAproxArg, UInt prescalerMaxArg> struct TimerCalc_16bit {
-	enum {
-		ticksCountPerSAprox = ticksCountPerSAproxArg,
-		prescalerMax = prescalerMaxArg,
-
-		_2PowPrescalerAprox = F_CPU / ticksCountPerSAprox / (1UL << 16),
-		prescalerPossibleMax = log2Static(_2PowPrescalerAprox),
-		prescaler = BGA__MATH__MIN(prescalerPossibleMax, prescalerMax),
-
-		arr = F_CPU / (1UL << prescaler) / ticksCountPerSAprox,
-		ticksCountPerSReal = F_CPU / (1UL << prescaler) / arr,
-	};
-
-	static_assert_lt(0, arr);
-	static_assert_lte(arr, (1UL << 16) - 1);
+	static_assert_lte(arr, arrMax);
 };
 
-typedef TimerCalc_16bit<1600UL, (1UL << 4) - 1> Tim2Calc;
-typedef TimerCalc_8bit<1600UL, (1UL << 3) - 1> Tim4Calc;
+typedef TimerCalc<1600UL, (1UL << 16) - 1, (1UL << 4) - 1> Tim2Calc;
+typedef TimerCalc<1600UL, (1UL << 8) - 1, (1UL << 3) - 1> Tim4Calc;
 
 #define msToTicksCount(msArg) (Tim4Calc::ticksCountPerSReal * (msArg) / 1000UL)
 
