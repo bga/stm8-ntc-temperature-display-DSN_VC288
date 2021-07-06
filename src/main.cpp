@@ -81,7 +81,6 @@ typedef TimerCalc_8bit<1600UL, (1UL << 3) - 1> Tim4Calc;
 
 #define msToTicksCount(msArg) (Tim4Calc::ticksCountPerSReal * (msArg) / 1000UL)
 
-
 void Timer4_init() {
 	using namespace ::STM8S_StdPeriph_Lib;
 	TIM4->PSCR = Tim4Calc::prescaler;
@@ -323,7 +322,18 @@ Bool tempAdc_isHwError;
 
 FU8 display_index = 0;
 
-void timerThread() {
+void sysClockThread() {
+	ticksCount += 1;
+}
+
+void displayThread() {
+	#if 1
+	display.updateManual(display_index);
+	cycleInc(display_index, 6);
+	#endif // 1
+}
+
+void measureThread() {
 	#if 0
 		displayDecrimal(ticksCount, &(display.displayChars[3]));
 	#endif // 1
@@ -345,11 +355,6 @@ void timerThread() {
 		}
 	};
 	#endif
-
-	#if 1
-	display.updateManual(display_index);
-	cycleInc(display_index, 6);
-	#endif // 1
 
 	#if 1
 	if(settings.displayUpdatePeriod <= (displayTicksCount += 1) ) {
@@ -407,14 +412,14 @@ void timerThread() {
 			display.displayChars[0] ^= _7SegmentsFont::dot;
 		};
 	}
-
-	ticksCount += 1;
 }
 
 BGA__MCU__HAL__ISR(STM8S_STDPERIPH_LIB__TIM4_ISR) {
 	clearBitMask(::STM8S_StdPeriph_Lib::TIM4->SR1, ::STM8S_StdPeriph_Lib::TIM4_SR1_UIF);
 
-	timerThread();
+	displayThread();
+	measureThread();
+	sysClockThread();
 }
 
 void Clock_setCpuFullSpeed() {
