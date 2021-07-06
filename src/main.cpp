@@ -14,7 +14,7 @@
   limitations under the License.
 */
 
-//#define ENABLE_STATIC_PRINT
+// #define BGA__ENABLE_STATIC_PRINT
 
 #include <!cpp/wrapper/cstring>
 // #include <STM8S_StdPeriph_Driver/stm8s.h>
