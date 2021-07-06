@@ -31,6 +31,7 @@
 #include <!cpp/bitManipulations.h>
 #include <!cpp/Binary_values_8_bit.h>
 #include <!cpp/RunningAvg.h>
+#include <!cpp/Math/MinMaxRollingBinaryTreeFinder.h>
 #include <!cpp/newKeywords.h>
 
 #include "config.h"
@@ -327,6 +328,30 @@ FI10_6 lastTemp = -1;
 FU16 ticksCountLive = 0;
 FU16 displayTicksCount = 0;
 
+struct MinMaxRollingBinaryTreeFinder_Config {
+	enum {
+		levelMax = 8,
+		levelValuesSizeLog2 = 2,
+	};
+
+	typedef FU16 Index;
+	typedef FU8 SubIndex;
+	typedef FU8 Level;
+	typedef I16 DataValue;
+};
+
+enum {
+	// MinMaxRollingBinaryTreeFinder_pushInterval = msToTicksCount((60UL * 60 * 24 * 1000) >> (MinMaxRollingBinaryTreeFinder_Config::levelMax * MinMaxRollingBinaryTreeFinder_Config::levelValuesSizeLog2)),
+	MinMaxRollingBinaryTreeFinder_pushInterval = msToTicksCount((60UL * 60 * 1 * 1000) >> (MinMaxRollingBinaryTreeFinder_Config::levelMax * MinMaxRollingBinaryTreeFinder_Config::levelValuesSizeLog2)),
+	MinMaxRollingBinaryTreeFinder_forceUpdateLog2 = 4,
+};
+static_print()
+
+FU16 MinMaxRollingBinaryTreeFinder_ticksCount = 0;
+
+typedef Math::MinMaxRollingBinaryTreeFinder<MinMaxRollingBinaryTreeFinder_Config> MinMaxRollingBinaryTreeFinder;
+typedef MinMaxRollingBinaryTreeFinder::MinMaxD MinMaxRollingBinaryTreeFinder_MinMaxD;
+MinMaxRollingBinaryTreeFinder minMaxRollingBinaryTreeFinder;
 
 enum { adcFetchPeriod = (1 << (Config::AdcUser_fetchSpeedPrescaler)) };
 FU16 nextAdcTickCount = 0;
@@ -417,13 +442,41 @@ void measureThread() {
 			displayTemp(userTemp, &(display.displayChars[Config::hlDisplayDataCharIndex]));
 		}
 		else if(settings.hlDisplayData.valueDisplayEndTime == hlDisplayData_ticksCount) {
-			cycleInc(hlDisplayData_index, arraySize(hlDisplayData));
+			// cycleInc(hlDisplayData_index, arraySize(hlDisplayData));
+			cycleInc(hlDisplayData_index, 2); //# do not show week and month min/max until it will be filled
 			hlDisplayData_ticksCount = -1;
 		}
 		hlDisplayData_ticksCount += 1;
 	}
 	#endif
 
+	#if 1
+	if(MinMaxRollingBinaryTreeFinder_pushInterval <= MinMaxRollingBinaryTreeFinder_ticksCount++) {
+		MinMaxRollingBinaryTreeFinder_ticksCount = 0;
+
+		MinMaxRollingBinaryTreeFinder_MinMaxD tempMinMax = minMaxRollingBinaryTreeFinder.addValue(lastTemp, minMaxRollingBinaryTreeFinder.levelMax - MinMaxRollingBinaryTreeFinder_forceUpdateLog2);
+		if((minMaxRollingBinaryTreeFinder.index & bitsCountToMask(minMaxRollingBinaryTreeFinder.levelMax - MinMaxRollingBinaryTreeFinder_forceUpdateLog2)) == bitsCountToMask(minMaxRollingBinaryTreeFinder.levelMax - MinMaxRollingBinaryTreeFinder_forceUpdateLog2)) {
+			hlDisplayData[HLDisplayData_h1].temp = tempMinMax.max;
+			hlDisplayData[HLDisplayData_l1].temp = tempMinMax.min;
+
+			#if 0
+			if(weekMinMaxTempCircularBuffer.cycleIndex()) {
+				monthMinMaxTempCircularBuffer.cycleIndex();
+			};
+
+			weekMinMaxTempCircularBuffer.setCurrrent(tempMinMax);
+			MinMaxRollingBinaryTreeFinder_MinMaxD weekMinMaxTemp = CircularBuffer_getMinMax(weekMinMaxTempCircularBuffer);
+			hlDisplayData[HLDisplayData_h7].temp = weekMinMaxTemp.max;
+			hlDisplayData[HLDisplayData_l7].temp = weekMinMaxTemp.min;
+
+			monthMinMaxTempCircularBuffer.setCurrrent(monthMinMaxTemp);
+			MinMaxRollingBinaryTreeFinder_MinMaxD monthMinMaxTemp = CircularBuffer_getMinMax(monthMinMaxTempCircularBuffer);
+			hlDisplayData[HLDisplayData_h30].temp = monthMinMaxTemp.max;
+			hlDisplayData[HLDisplayData_l30].temp = monthMinMaxTemp.min;
+			#endif
+		};
+	};
+	#endif // 1
 
 	if(0) debug {
 		if((ticksCount & bitsCountToMask(7)) == 0) {
