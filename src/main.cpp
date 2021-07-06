@@ -76,11 +76,40 @@ template<UIntMax ticksCountPerSAproxArg, UInt prescalerMaxArg> struct TimerCalc_
 	static_assert_lt(0, arr);
 	static_assert_lte(arr, (1UL << 8) - 1);
 };
+template<UIntMax ticksCountPerSAproxArg, UInt prescalerMaxArg> struct TimerCalc_16bit {
+	enum {
+		ticksCountPerSAprox = ticksCountPerSAproxArg,
+		prescalerMax = prescalerMaxArg,
 
+		_2PowPrescalerAprox = F_CPU / ticksCountPerSAprox / (1UL << 16),
+		prescalerPossibleMax = log2Static(_2PowPrescalerAprox),
+		prescaler = BGA__MATH__MIN(prescalerPossibleMax, prescalerMax),
+
+		arr = F_CPU / (1UL << prescaler) / ticksCountPerSAprox,
+		ticksCountPerSReal = F_CPU / (1UL << prescaler) / arr,
+	};
+
+	static_assert_lt(0, arr);
+	static_assert_lte(arr, (1UL << 16) - 1);
+};
+
+typedef TimerCalc_16bit<1600UL, (1UL << 4) - 1> Tim2Calc;
 typedef TimerCalc_8bit<1600UL, (1UL << 3) - 1> Tim4Calc;
 
 #define msToTicksCount(msArg) (Tim4Calc::ticksCountPerSReal * (msArg) / 1000UL)
 
+void Timer2_init() {
+	using namespace ::STM8S_StdPeriph_Lib;
+	TIM2->PSCR = Tim2Calc::prescaler;
+	// TIM2->EGR = TIM2_EGR_UG;
+
+	TIM2->ARRH = U8(Tim2Calc::arr >> 8);
+	TIM2->ARRL = U8(Tim2Calc::arr);
+
+	setBitMask(TIM2->IER, TIM2_IER_UIE); // Enable Update Interrupt
+	setBitMask(TIM2->CR1, TIM2_CR1_CEN); // Enable TIM2
+	clearBitMask(TIM2->SR1, TIM2_SR1_UIF);
+}
 void Timer4_init() {
 	using namespace ::STM8S_StdPeriph_Lib;
 	TIM4->PSCR = Tim4Calc::prescaler;
@@ -421,6 +450,11 @@ BGA__MCU__HAL__ISR(STM8S_STDPERIPH_LIB__TIM4_ISR) {
 	measureThread();
 	sysClockThread();
 }
+BGA__MCU__HAL__ISR(STM8S_STDPERIPH_LIB__TIM2_OVF_ISR) {
+	clearBitMask(::STM8S_StdPeriph_Lib::TIM2->SR1, ::STM8S_StdPeriph_Lib::TIM2_SR1_UIF);
+
+	measureThread();
+}
 
 void Clock_setCpuFullSpeed() {
 	using namespace ::STM8S_StdPeriph_Lib;
@@ -430,7 +464,7 @@ void Clock_setCpuFullSpeed() {
 void Hw_enable() {
 	using namespace ::STM8S_StdPeriph_Lib;
 	//# CLK->PCKENR* by default has all bits set. We need only enable clocking for used peripheral. So direct assignment
-	CLK->PCKENR1 = CLK_PCKENR1_TIM4;
+	CLK->PCKENR1 = CLK_PCKENR1_TIM2 | CLK_PCKENR1_TIM4;
 	CLK->PCKENR2 = CLK_PCKENR2_ADC;
 }
 
@@ -457,6 +491,7 @@ void main() {
 	Config::tempAdcGpioPort.init();
 	Config::tempAdcGpioVccPort.init();
 
+	// Timer2_init();
 	Timer4_init();
 	::STM8S_StdPeriph_Lib::enableInterrupts();
 
