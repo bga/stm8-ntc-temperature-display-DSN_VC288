@@ -408,6 +408,7 @@ void measureThread() {
 
 	#if 1
 	if(settings.displayUpdatePeriod <= (displayTicksCount += 1) ) {
+		displayTicksCount = 0;
 		if(tempAdc_isHwError) {
 			displayHwError(&(display.displayChars[Config::tempDisplayCharIndex]));
 		}
