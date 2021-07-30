@@ -453,7 +453,7 @@ void measureThread() {
 		MinMaxRollingBinaryTreeFinder_ticksCount = 0;
 
 		MinMaxRollingBinaryTreeFinder_MinMaxD tempMinMax = minMaxRollingBinaryTreeFinder.addValue(lastTemp, minMaxRollingBinaryTreeFinder.levelMax - MinMaxRollingBinaryTreeFinder_forceUpdateLog2);
-		if((minMaxRollingBinaryTreeFinder.index & bitsCountToMask(minMaxRollingBinaryTreeFinder.levelMax - MinMaxRollingBinaryTreeFinder_forceUpdateLog2)) == bitsCountToMask(minMaxRollingBinaryTreeFinder.levelMax - MinMaxRollingBinaryTreeFinder_forceUpdateLog2)) {
+		if((minMaxRollingBinaryTreeFinder.index & bitsCountToMask((minMaxRollingBinaryTreeFinder.levelMax - MinMaxRollingBinaryTreeFinder_forceUpdateLog2) * MinMaxRollingBinaryTreeFinder_Config::levelValuesSizeLog2)) == bitsCountToMask((minMaxRollingBinaryTreeFinder.levelMax - MinMaxRollingBinaryTreeFinder_forceUpdateLog2) * MinMaxRollingBinaryTreeFinder_Config::levelValuesSizeLog2)) {
 			hlDisplayData[HLDisplayData_h1].temp = tempMinMax.max;
 			hlDisplayData[HLDisplayData_l1].temp = tempMinMax.min;
 
