@@ -322,7 +322,8 @@ FU16 hlDisplayData_ticksCount = -1;
 FU16 hlDisplayData_index = 0;
 
 
-FI10_6 lastTemp = -1;
+enum { lastTemp_notFilledMagicNumber = 0x7FFE };
+FI10_6 lastTemp = lastTemp_notFilledMagicNumber;
 
 
 FU16 ticksCountLive = 0;
@@ -420,7 +421,7 @@ void measureThread() {
 			FU16 rH = rrToRh(adcAvg, settings.rDiv);
 			FI10_6 temp = settings.tempAdcFix.m_ntcThermistor.convert(rH);
 
-			if(settings.tempHysteresis < Math_abs(temp - lastTemp)) {
+			if(lastTemp == lastTemp_notFilledMagicNumber || settings.tempHysteresis < Math_abs(temp - lastTemp)) {
 				lastTemp = temp;
 				A::convertAndDisplayRawTemp(temp, &(display.displayChars[Config::tempDisplayCharIndex]));
 			};
@@ -449,7 +450,7 @@ void measureThread() {
 	#endif
 
 	#if 1
-	if(MinMaxRollingBinaryTreeFinder_pushInterval <= MinMaxRollingBinaryTreeFinder_ticksCount++) {
+	if(MinMaxRollingBinaryTreeFinder_pushInterval <= MinMaxRollingBinaryTreeFinder_ticksCount++ && lastTemp != lastTemp_notFilledMagicNumber) {
 		MinMaxRollingBinaryTreeFinder_ticksCount = 0;
 
 		MinMaxRollingBinaryTreeFinder_MinMaxD tempMinMax = minMaxRollingBinaryTreeFinder.addValue(lastTemp, minMaxRollingBinaryTreeFinder.levelMax - MinMaxRollingBinaryTreeFinder_forceUpdateLog2);
