@@ -355,7 +355,7 @@ typedef MinMaxRollingBinaryTreeFinder::MinMaxD MinMaxRollingBinaryTreeFinder_Min
 MinMaxRollingBinaryTreeFinder minMaxRollingBinaryTreeFinder;
 
 enum { adcFetchPeriod = (1 << (Config::AdcUser_fetchSpeedPrescaler)) };
-FU16 nextAdcTickCount = 0;
+FU16 adcTicksCount = 0;
 
 RunningAvg<FU16[Config::AdcUser_adcsSize], FU32> tempAdcRunningAvg;
 Bool tempAdc_isHwError;
@@ -389,8 +389,8 @@ void measureThread() {
 	#endif // 1
 
 	#if 1
-	if(ticksCount == nextAdcTickCount) {
-		nextAdcTickCount += adcFetchPeriod;
+	if(adcFetchPeriod <= adcTicksCount++) {
+		adcTicksCount = 0;
 
 		Config::tempAdcGpioVccPort.on();
 		Adc_Value t = Config::tempAdcGpioPort.readSync();
