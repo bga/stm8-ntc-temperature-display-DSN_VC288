@@ -553,7 +553,7 @@ namespace MeasureThread {
 		renderTempTask,
 		renderHLDisplayDataTask,
 		pushMinMaxRollingBinaryTreeFinderTask,
-		#ifdef NDEBUG
+		#ifndef NDEBUG
 			debugHeartBeatTask,
 		#endif
 	};
