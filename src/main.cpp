@@ -502,10 +502,10 @@ namespace MeasureThread {
 	}
 
 	void pushMinMaxRollingBinaryTreeFinderTask(TaskArgs taskArgs);
-	void pushMinMaxRollingBinaryTreeFinderTask_push() {
+	void pushMinMaxRollingBinaryTreeFinderTask_forceDispatch() {
 		if(MinMaxRollingBinaryTreeFinder_pushInterval <= MinMaxRollingBinaryTreeFinder_ticksCount++ && lastTemp != lastTemp_notFilledMagicNumber) {
 			MinMaxRollingBinaryTreeFinder_ticksCount = 0;
-			scheduler.push(pushMinMaxRollingBinaryTreeFinderTask);
+			pushMinMaxRollingBinaryTreeFinderTask(TaskArgs());
 		};
 	}
 	void pushMinMaxRollingBinaryTreeFinderTask(TaskArgs taskArgs) {
@@ -552,7 +552,6 @@ namespace MeasureThread {
 		readAdcTask,
 		renderTempTask,
 		renderHLDisplayDataTask,
-		pushMinMaxRollingBinaryTreeFinderTask,
 		#ifndef NDEBUG
 			debugHeartBeatTask,
 		#endif
@@ -573,7 +572,7 @@ void measureThread() {
 	readAdcTask_push();
 	renderTempTask_push();
 	renderHLDisplayDataTask_push();
-	pushMinMaxRollingBinaryTreeFinderTask_push();
+	pushMinMaxRollingBinaryTreeFinderTask_forceDispatch();
 	if(0) debug debugHeartBeatTask_push();
 
 	scheduler.dispatch(TaskArgs());
