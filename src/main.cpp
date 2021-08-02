@@ -488,11 +488,8 @@ void measureThread() {
 
 		MinMaxRollingBinaryTreeFinder_MinMaxD tempMinMax = minMaxRollingBinaryTreeFinder.addValue(lastTemp, minMaxRollingBinaryTreeFinder.levelMax - MinMaxRollingBinaryTreeFinder_forceUpdateLog2);
 		if(minMaxRollingBinaryTreeFinder.isCarry(MinMaxRollingBinaryTreeFinder_forceUpdateLog2)) {
-			hlDisplayData[HLDisplayData_h1].temp = tempMinMax.max;
-			hlDisplayData[HLDisplayData_l1].temp = tempMinMax.min;
-
 			#if 1
-			if(minMaxRollingBinaryTreeFinder.isCarry(0)) {
+			if(HLDisplayData_isNotFilled() || minMaxRollingBinaryTreeFinder.isCarry(0)) {
 				std::optional<MinMaxRollingBinaryTreeFinder_MinMaxD> maybeWeekMinMaxTemp = CircularBuffer_addMinMax(tempMinMax, weekMinMaxTempCircularBuffer);
 				if(maybeWeekMinMaxTemp.has_value()) {
 					MinMaxRollingBinaryTreeFinder_MinMaxD weekMinMaxTemp = *maybeWeekMinMaxTemp;
@@ -508,6 +505,9 @@ void measureThread() {
 				};
 			};
 			#endif
+
+			hlDisplayData[HLDisplayData_h1].temp = tempMinMax.max;
+			hlDisplayData[HLDisplayData_l1].temp = tempMinMax.min;
 		};
 	};
 	#endif // 1
