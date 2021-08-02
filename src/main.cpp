@@ -487,12 +487,12 @@ void measureThread() {
 		MinMaxRollingBinaryTreeFinder_ticksCount = 0;
 
 		MinMaxRollingBinaryTreeFinder_MinMaxD tempMinMax = minMaxRollingBinaryTreeFinder.addValue(lastTemp, minMaxRollingBinaryTreeFinder.levelMax - MinMaxRollingBinaryTreeFinder_forceUpdateLog2);
-		if((minMaxRollingBinaryTreeFinder.index & bitsCountToMask((minMaxRollingBinaryTreeFinder.levelMax - MinMaxRollingBinaryTreeFinder_forceUpdateLog2) * MinMaxRollingBinaryTreeFinder_Config::levelValuesSizeLog2)) == bitsCountToMask((minMaxRollingBinaryTreeFinder.levelMax - MinMaxRollingBinaryTreeFinder_forceUpdateLog2) * MinMaxRollingBinaryTreeFinder_Config::levelValuesSizeLog2)) {
+		if(minMaxRollingBinaryTreeFinder.isCarry(MinMaxRollingBinaryTreeFinder_forceUpdateLog2)) {
 			hlDisplayData[HLDisplayData_h1].temp = tempMinMax.max;
 			hlDisplayData[HLDisplayData_l1].temp = tempMinMax.min;
 
 			#if 1
-			if((minMaxRollingBinaryTreeFinder.index & bitsCountToMask(minMaxRollingBinaryTreeFinder.levelMax * MinMaxRollingBinaryTreeFinder_Config::levelValuesSizeLog2)) == bitsCountToMask(minMaxRollingBinaryTreeFinder.levelMax * MinMaxRollingBinaryTreeFinder_Config::levelValuesSizeLog2)) {
+			if(minMaxRollingBinaryTreeFinder.isCarry(0)) {
 				std::optional<MinMaxRollingBinaryTreeFinder_MinMaxD> maybeWeekMinMaxTemp = CircularBuffer_addMinMax(tempMinMax, weekMinMaxTempCircularBuffer);
 				if(maybeWeekMinMaxTemp.has_value()) {
 					MinMaxRollingBinaryTreeFinder_MinMaxD weekMinMaxTemp = *maybeWeekMinMaxTemp;
