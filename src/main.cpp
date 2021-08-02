@@ -293,36 +293,6 @@ void displayTemp(FI16 x, FU8* dest) {
 
 }
 
-enum {
-	HLDisplayData_h1 = 0,
-	HLDisplayData_l1,
-	HLDisplayData_h7,
-	HLDisplayData_l7,
-	HLDisplayData_h30,
-	HLDisplayData_l30,
-};
-
-const FI10_6 HLDisplayData_notFilledMagic = FI10_6(0x8000);
-
-
-struct HLDisplayData {
-	const char name[3];
-	FI16 temp;
-} hlDisplayData[6] = {
-	[HLDisplayData_h1] = { { _7SegmentsFont::H, _7SegmentsFont::d1, 0  }, HLDisplayData_notFilledMagic },
-	[HLDisplayData_l1] = { { _7SegmentsFont::L, _7SegmentsFont::d1, 0  }, 222 },
-	[HLDisplayData_h7] = { { _7SegmentsFont::H, _7SegmentsFont::d7, 0  }, 333 },
-	[HLDisplayData_l7] = { { _7SegmentsFont::L, _7SegmentsFont::d7, 0  }, 444 },
-	[HLDisplayData_h30] = { { _7SegmentsFont::H, _7SegmentsFont::d3, _7SegmentsFont::d0 }, 444 },
-	[HLDisplayData_l30] = { { _7SegmentsFont::L, _7SegmentsFont::d3, _7SegmentsFont::d0 }, 667 },
-};
-
-inline Bool HLDisplayData_isNotFilled() {
-	return hlDisplayData[HLDisplayData_h1].temp == HLDisplayData_notFilledMagic;
-}
-
-FU16 hlDisplayData_ticksCount = -1;
-FU16 hlDisplayData_index = 0;
 
 
 enum { lastTemp_notFilledMagicNumber = 0x7FFE };
@@ -330,75 +300,13 @@ FI10_6 lastTemp = lastTemp_notFilledMagicNumber;
 
 
 FU16 ticksCountLive = 0;
-FU16 displayTicksCount = 0;
 
-struct MinMaxRollingBinaryTreeFinder_Config {
-	enum {
-		levelMax = 8,
-		levelValuesSizeLog2 = 2,
-	};
-
-	typedef FU16 Index;
-	typedef FU8 SubIndex;
-	typedef FU8 Level;
-	typedef I16 DataValue;
-};
-
-enum {
-	// MinMaxRollingBinaryTreeFinder_pushInterval = msToTicksCount((60UL * 60 * 24 * 1000) >> (MinMaxRollingBinaryTreeFinder_Config::levelMax * MinMaxRollingBinaryTreeFinder_Config::levelValuesSizeLog2)),
-	MinMaxRollingBinaryTreeFinder_pushInterval = msToTicksCount((60UL * 60 * 1 * 1000) >> (MinMaxRollingBinaryTreeFinder_Config::levelMax * MinMaxRollingBinaryTreeFinder_Config::levelValuesSizeLog2)),
-	MinMaxRollingBinaryTreeFinder_forceUpdateLog2 = 4,
-};
-static_print()
-
-FU16 MinMaxRollingBinaryTreeFinder_ticksCount = 0;
-
-typedef Math::MinMaxRollingBinaryTreeFinder<MinMaxRollingBinaryTreeFinder_Config> MinMaxRollingBinaryTreeFinder;
-typedef MinMaxRollingBinaryTreeFinder::MinMaxD MinMaxRollingBinaryTreeFinder_MinMaxD;
-MinMaxRollingBinaryTreeFinder minMaxRollingBinaryTreeFinder;
-
-enum { adcFetchPeriod = (1 << (Config::AdcUser_fetchSpeedPrescaler)) };
-FU16 adcTicksCount = 0;
-
-RunningAvg<FU16[Config::AdcUser_adcsSize], FU32> tempAdcRunningAvg;
-Bool tempAdc_isHwError;
-
-FU8 display_index = 0;
-
-MinMaxRollingBinaryTreeFinder_MinMaxD weekMinMaxTempCircularBuffer_data[7];
-CircularBuffer_Dynamic<MinMaxRollingBinaryTreeFinder_MinMaxD, FU8> weekMinMaxTempCircularBuffer(weekMinMaxTempCircularBuffer_data, arraySize(weekMinMaxTempCircularBuffer_data));
-MinMaxRollingBinaryTreeFinder_MinMaxD monthMinMaxTempCircularBuffer_data[4];
-CircularBuffer_Dynamic<MinMaxRollingBinaryTreeFinder_MinMaxD, FU8> monthMinMaxTempCircularBuffer(monthMinMaxTempCircularBuffer_data, arraySize(monthMinMaxTempCircularBuffer_data));
-
-
-MinMaxRollingBinaryTreeFinder_MinMaxD CircularBuffer_findMinMax(MinMaxRollingBinaryTreeFinder_MinMaxD* data, Size dataSize) {
-	return minMaxRollingBinaryTreeFinder.fromArray(data, dataSize);
-}
-
-std::optional<MinMaxRollingBinaryTreeFinder_MinMaxD> CircularBuffer_addMinMax(const MinMaxRollingBinaryTreeFinder_MinMaxD& minMax, CircularBuffer_Dynamic<MinMaxRollingBinaryTreeFinder_MinMaxD, FU8>& circularBuffer) {
-	Bool isInit = false;
-	if(!circularBuffer.isInited()) {
-		circularBuffer.init();
-		isInit = true;
-	};
-
-	circularBuffer.add(minMax);
-
-	if(isInit) {
-		return minMax;
-	}
-	else if(circularBuffer.isCarry()) {
-		return CircularBuffer_findMinMax(circularBuffer.data, circularBuffer.size);
-	}
-	else {
-		return std::nullopt;
-	}
-}
 
 void sysClockThread() {
 	ticksCountLive += 1;
 }
 
+FU8 display_index = 0;
 void displayThread() {
 	FU16 ticksCount = ticksCountLive;
 
@@ -424,6 +332,13 @@ namespace MeasureThread {
 		}
 	};
 
+
+	enum { adcFetchPeriod = (1 << (Config::AdcUser_fetchSpeedPrescaler)) };
+	FU16 adcTicksCount = 0;
+
+	RunningAvg<FU16[Config::AdcUser_adcsSize], FU32> tempAdcRunningAvg;
+	Bool tempAdc_isHwError;
+
 	void readAdcTask(TaskArgs taskArgs);
 	void readAdcTask_push() {
 		if(adcFetchPeriod <= adcTicksCount++) {
@@ -445,6 +360,8 @@ namespace MeasureThread {
 		}
 	}
 
+
+	FU16 displayTicksCount = 0;
 	void renderTempTask(TaskArgs taskArgs);
 	void renderTempTask_push() {
 		if(settings.displayUpdatePeriod <= (displayTicksCount += 1) ) {
@@ -473,6 +390,38 @@ namespace MeasureThread {
 		}
 	}
 
+
+	enum {
+		HLDisplayData_h1 = 0,
+		HLDisplayData_l1,
+		HLDisplayData_h7,
+		HLDisplayData_l7,
+		HLDisplayData_h30,
+		HLDisplayData_l30,
+	};
+
+	const FI10_6 HLDisplayData_notFilledMagic = FI10_6(0x8000);
+
+
+	struct HLDisplayData {
+		const char name[3];
+		FI16 temp;
+	} hlDisplayData[6] = {
+		[HLDisplayData_h1] = { { _7SegmentsFont::H, _7SegmentsFont::d1, 0  }, HLDisplayData_notFilledMagic },
+		[HLDisplayData_l1] = { { _7SegmentsFont::L, _7SegmentsFont::d1, 0  }, 222 },
+		[HLDisplayData_h7] = { { _7SegmentsFont::H, _7SegmentsFont::d7, 0  }, 333 },
+		[HLDisplayData_l7] = { { _7SegmentsFont::L, _7SegmentsFont::d7, 0  }, 444 },
+		[HLDisplayData_h30] = { { _7SegmentsFont::H, _7SegmentsFont::d3, _7SegmentsFont::d0 }, 444 },
+		[HLDisplayData_l30] = { { _7SegmentsFont::L, _7SegmentsFont::d3, _7SegmentsFont::d0 }, 667 },
+	};
+
+	inline Bool HLDisplayData_isNotFilled() {
+		return hlDisplayData[HLDisplayData_h1].temp == HLDisplayData_notFilledMagic;
+	}
+
+	FU16 hlDisplayData_ticksCount = -1;
+	FU16 hlDisplayData_index = 0;
+
 	void renderHLDisplayDataTask(TaskArgs taskArgs);
 	void renderHLDisplayDataTask_push() {
 		if(HLDisplayData_isNotFilled()) {
@@ -497,6 +446,60 @@ namespace MeasureThread {
 		hlDisplayData_ticksCount += 1;
 	}
 
+
+	struct MinMaxRollingBinaryTreeFinder_Config {
+		enum {
+			levelMax = 8,
+			levelValuesSizeLog2 = 2,
+		};
+
+		typedef FU16 Index;
+		typedef FU8 SubIndex;
+		typedef FU8 Level;
+		typedef I16 DataValue;
+	};
+
+	enum {
+		// MinMaxRollingBinaryTreeFinder_pushInterval = msToTicksCount((60UL * 60 * 24 * 1000) >> (MinMaxRollingBinaryTreeFinder_Config::levelMax * MinMaxRollingBinaryTreeFinder_Config::levelValuesSizeLog2)),
+		MinMaxRollingBinaryTreeFinder_pushInterval = msToTicksCount((60UL * 60 * 1 * 1000) >> (MinMaxRollingBinaryTreeFinder_Config::levelMax * MinMaxRollingBinaryTreeFinder_Config::levelValuesSizeLog2)),
+		MinMaxRollingBinaryTreeFinder_forceUpdateLog2 = 4,
+	};
+
+	FU16 MinMaxRollingBinaryTreeFinder_ticksCount = 0;
+
+	typedef Math::MinMaxRollingBinaryTreeFinder<MinMaxRollingBinaryTreeFinder_Config> MinMaxRollingBinaryTreeFinder;
+	typedef MinMaxRollingBinaryTreeFinder::MinMaxD MinMaxRollingBinaryTreeFinder_MinMaxD;
+	MinMaxRollingBinaryTreeFinder minMaxRollingBinaryTreeFinder;
+
+	MinMaxRollingBinaryTreeFinder_MinMaxD weekMinMaxTempCircularBuffer_data[7];
+	CircularBuffer_Dynamic<MinMaxRollingBinaryTreeFinder_MinMaxD, FU8> weekMinMaxTempCircularBuffer(weekMinMaxTempCircularBuffer_data, arraySize(weekMinMaxTempCircularBuffer_data));
+	MinMaxRollingBinaryTreeFinder_MinMaxD monthMinMaxTempCircularBuffer_data[4];
+	CircularBuffer_Dynamic<MinMaxRollingBinaryTreeFinder_MinMaxD, FU8> monthMinMaxTempCircularBuffer(monthMinMaxTempCircularBuffer_data, arraySize(monthMinMaxTempCircularBuffer_data));
+
+
+	MinMaxRollingBinaryTreeFinder_MinMaxD CircularBuffer_findMinMax(MinMaxRollingBinaryTreeFinder_MinMaxD* data, Size dataSize) {
+		return minMaxRollingBinaryTreeFinder.fromArray(data, dataSize);
+	}
+
+	std::optional<MinMaxRollingBinaryTreeFinder_MinMaxD> CircularBuffer_addMinMax(const MinMaxRollingBinaryTreeFinder_MinMaxD& minMax, CircularBuffer_Dynamic<MinMaxRollingBinaryTreeFinder_MinMaxD, FU8>& circularBuffer) {
+		Bool isInit = false;
+		if(!circularBuffer.isInited()) {
+			circularBuffer.init();
+			isInit = true;
+		};
+
+		circularBuffer.add(minMax);
+
+		if(isInit) {
+			return minMax;
+		}
+		else if(circularBuffer.isCarry()) {
+			return CircularBuffer_findMinMax(circularBuffer.data, circularBuffer.size);
+		}
+		else {
+			return std::nullopt;
+		}
+	}
 
 	void pushMinMaxRollingBinaryTreeFinderTask(TaskArgs taskArgs);
 	void pushMinMaxRollingBinaryTreeFinderTask_push() {
