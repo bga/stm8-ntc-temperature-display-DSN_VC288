@@ -548,6 +548,7 @@ namespace MeasureThread {
 		};
 	}
 
+	enum { MeasureThread_maxTaskDispatchesPerTick = 2 };
 	MeasureThread_Scheduler::Task tasks[] = {
 		readAdcTask,
 		renderTempTask,
@@ -575,7 +576,7 @@ void measureThread() {
 	pushMinMaxRollingBinaryTreeFinderTask_forceDispatch();
 	if(0) debug debugHeartBeatTask_push();
 
-	scheduler.dispatch(TaskArgs());
+	forInc(FU8, i, 0, MeasureThread_maxTaskDispatchesPerTick) scheduler.dispatch(TaskArgs());
 }
 
 BGA__MCU__HAL__ISR(STM8S_STDPERIPH_LIB__TIM4_ISR) {
