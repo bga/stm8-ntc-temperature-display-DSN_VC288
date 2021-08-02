@@ -34,6 +34,7 @@
 #include <!cpp/RunningAvg.h>
 #include <!cpp/CircularBuffer.h>
 #include <!cpp/Math/MinMaxRollingBinaryTreeFinder.h>
+#include <!cpp/Scheduler/Stack.h>
 #include <!cpp/newKeywords.h>
 
 #include "config.h"
@@ -407,23 +408,30 @@ void displayThread() {
 	#endif // 1
 }
 
-void measureThread() {
+namespace MeasureThread {
+
+	struct TaskArgs {
+
+	};
+
+	typedef Scheduler::Stack<TaskArgs, FU8> MeasureThread_Scheduler;
+
+	extern MeasureThread_Scheduler scheduler;
+
 	struct A {
 		static inline void convertAndDisplayRawTemp(FI16 x, FU8* dest) {
 			displayTemp(User_convertTemperature((FI32(x) * 10) >> 6), dest);
 		}
 	};
 
-	FU16 ticksCount = ticksCountLive;
-
-	#if 0
-		displayDecrimal(ticksCount, &(display.displayChars[3]));
-	#endif // 1
-
-	#if 1
-	if(adcFetchPeriod <= adcTicksCount++) {
-		adcTicksCount = 0;
-
+	void readAdcTask(TaskArgs taskArgs);
+	void readAdcTask_push() {
+		if(adcFetchPeriod <= adcTicksCount++) {
+			adcTicksCount = 0;
+			scheduler.push(readAdcTask);
+		};
+	}
+	void readAdcTask(TaskArgs taskArgs) {
 		Config::tempAdcGpioVccPort.on();
 		Adc_Value t = Config::tempAdcGpioPort.readSync();
 		Config::tempAdcGpioVccPort.off();
@@ -435,12 +443,16 @@ void measureThread() {
 		else {
 			tempAdc_isHwError = true;
 		}
-	};
-	#endif
+	}
 
-	#if 1
-	if(settings.displayUpdatePeriod <= (displayTicksCount += 1) ) {
-		displayTicksCount = 0;
+	void renderTempTask(TaskArgs taskArgs);
+	void renderTempTask_push() {
+		if(settings.displayUpdatePeriod <= (displayTicksCount += 1) ) {
+			displayTicksCount = 0;
+			scheduler.push(renderTempTask);
+		};
+	}
+	void renderTempTask(TaskArgs taskArgs) {
 		if(tempAdc_isHwError) {
 			displayHwError(&(display.displayChars[Config::tempDisplayCharIndex]));
 		}
@@ -460,13 +472,17 @@ void measureThread() {
 			};
 		}
 	}
-	#endif
 
-	#if 1
-	if(HLDisplayData_isNotFilled()) {
-		//# display nothing
+	void renderHLDisplayDataTask(TaskArgs taskArgs);
+	void renderHLDisplayDataTask_push() {
+		if(HLDisplayData_isNotFilled()) {
+			//# display nothing
+		}
+		else {
+			scheduler.push(renderHLDisplayDataTask);
+		}
 	}
-	else {
+	void renderHLDisplayDataTask(TaskArgs taskArgs) {
 		if(0 == hlDisplayData_ticksCount) {
 			memcpy(&(display.displayChars[Config::hlDisplayDataCharIndex]), hlDisplayData[hlDisplayData_index].name, sizeof(hlDisplayData[hlDisplayData_index].name));
 		}
@@ -480,12 +496,16 @@ void measureThread() {
 		}
 		hlDisplayData_ticksCount += 1;
 	}
-	#endif
 
-	#if 1
-	if(MinMaxRollingBinaryTreeFinder_pushInterval <= MinMaxRollingBinaryTreeFinder_ticksCount++ && lastTemp != lastTemp_notFilledMagicNumber) {
-		MinMaxRollingBinaryTreeFinder_ticksCount = 0;
 
+	void pushMinMaxRollingBinaryTreeFinderTask(TaskArgs taskArgs);
+	void pushMinMaxRollingBinaryTreeFinderTask_push() {
+		if(MinMaxRollingBinaryTreeFinder_pushInterval <= MinMaxRollingBinaryTreeFinder_ticksCount++ && lastTemp != lastTemp_notFilledMagicNumber) {
+			MinMaxRollingBinaryTreeFinder_ticksCount = 0;
+			scheduler.push(pushMinMaxRollingBinaryTreeFinderTask);
+		};
+	}
+	void pushMinMaxRollingBinaryTreeFinderTask(TaskArgs taskArgs) {
 		MinMaxRollingBinaryTreeFinder_MinMaxD tempMinMax = minMaxRollingBinaryTreeFinder.addValue(lastTemp, minMaxRollingBinaryTreeFinder.levelMax - MinMaxRollingBinaryTreeFinder_forceUpdateLog2);
 		if(minMaxRollingBinaryTreeFinder.isCarry(MinMaxRollingBinaryTreeFinder_forceUpdateLog2)) {
 			#if 1
@@ -509,14 +529,51 @@ void measureThread() {
 			hlDisplayData[HLDisplayData_h1].temp = tempMinMax.max;
 			hlDisplayData[HLDisplayData_l1].temp = tempMinMax.min;
 		};
-	};
-	#endif // 1
+	}
 
-	if(0) debug {
+	void debugHeartBeatTask(TaskArgs taskArgs);
+	void debugHeartBeatTask_push() {
+		if(0) debug {
+			scheduler.push(debugHeartBeatTask);
+		}
+	}
+	void debugHeartBeatTask(TaskArgs taskArgs) {
+		FU16 ticksCount = ticksCountLive;
+
 		if((ticksCount & bitsCountToMask(7)) == 0) {
 			display.displayChars[0] ^= _7SegmentsFont::dot;
 		};
 	}
+
+	MeasureThread_Scheduler::Task tasks[] = {
+		readAdcTask,
+		renderTempTask,
+		renderHLDisplayDataTask,
+		pushMinMaxRollingBinaryTreeFinderTask,
+		#ifdef NDEBUG
+			debugHeartBeatTask,
+		#endif
+	};
+	MeasureThread_Scheduler scheduler(tasks, arraySize(tasks));
+}
+
+void measureThread() {
+	using namespace MeasureThread;
+
+	FU16 ticksCount = ticksCountLive;
+
+	#if 0
+		displayDecrimal(ticksCount, &(display.displayChars[3]));
+		return;
+	#endif // 1
+
+	readAdcTask_push();
+	renderTempTask_push();
+	renderHLDisplayDataTask_push();
+	pushMinMaxRollingBinaryTreeFinderTask_push();
+	if(0) debug debugHeartBeatTask_push();
+
+	scheduler.dispatch(TaskArgs());
 }
 
 BGA__MCU__HAL__ISR(STM8S_STDPERIPH_LIB__TIM4_ISR) {
