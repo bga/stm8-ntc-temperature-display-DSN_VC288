@@ -17,6 +17,7 @@
 // #define BGA__ENABLE_STATIC_PRINT
 
 #include <!cpp/wrapper/cstring>
+#include <!cpp/wrapper/optional>
 // #include <STM8S_StdPeriph_Driver/stm8s.h>
 #include <delay.h>
 
@@ -31,6 +32,7 @@
 #include <!cpp/bitManipulations.h>
 #include <!cpp/Binary_values_8_bit.h>
 #include <!cpp/RunningAvg.h>
+#include <!cpp/CircularBuffer.h>
 #include <!cpp/Math/MinMaxRollingBinaryTreeFinder.h>
 #include <!cpp/newKeywords.h>
 
@@ -362,6 +364,36 @@ Bool tempAdc_isHwError;
 
 FU8 display_index = 0;
 
+MinMaxRollingBinaryTreeFinder_MinMaxD weekMinMaxTempCircularBuffer_data[7];
+CircularBuffer_Dynamic<MinMaxRollingBinaryTreeFinder_MinMaxD, FU8> weekMinMaxTempCircularBuffer(weekMinMaxTempCircularBuffer_data, arraySize(weekMinMaxTempCircularBuffer_data));
+MinMaxRollingBinaryTreeFinder_MinMaxD monthMinMaxTempCircularBuffer_data[4];
+CircularBuffer_Dynamic<MinMaxRollingBinaryTreeFinder_MinMaxD, FU8> monthMinMaxTempCircularBuffer(monthMinMaxTempCircularBuffer_data, arraySize(monthMinMaxTempCircularBuffer_data));
+
+
+MinMaxRollingBinaryTreeFinder_MinMaxD CircularBuffer_findMinMax(MinMaxRollingBinaryTreeFinder_MinMaxD* data, Size dataSize) {
+	return minMaxRollingBinaryTreeFinder.fromArray(data, dataSize);
+}
+
+std::optional<MinMaxRollingBinaryTreeFinder_MinMaxD> CircularBuffer_addMinMax(const MinMaxRollingBinaryTreeFinder_MinMaxD& minMax, CircularBuffer_Dynamic<MinMaxRollingBinaryTreeFinder_MinMaxD, FU8>& circularBuffer) {
+	Bool isInit = false;
+	if(!circularBuffer.isInited()) {
+		circularBuffer.init();
+		isInit = true;
+	};
+
+	circularBuffer.add(minMax);
+
+	if(isInit) {
+		return minMax;
+	}
+	else if(circularBuffer.isCarry()) {
+		return CircularBuffer_findMinMax(circularBuffer.data, circularBuffer.size);
+	}
+	else {
+		return std::nullopt;
+	}
+}
+
 void sysClockThread() {
 	ticksCountLive += 1;
 }
@@ -442,8 +474,8 @@ void measureThread() {
 			A::convertAndDisplayRawTemp(hlDisplayData[hlDisplayData_index].temp, &(display.displayChars[Config::hlDisplayDataCharIndex]));
 		}
 		else if(settings.hlDisplayData.valueDisplayEndTime == hlDisplayData_ticksCount) {
-			// cycleInc(hlDisplayData_index, arraySize(hlDisplayData));
-			cycleInc(hlDisplayData_index, 2); //# do not show week and month min/max until it will be filled
+			cycleInc(hlDisplayData_index, arraySize(hlDisplayData));
+			// cycleInc(hlDisplayData_index, 2); //# do not show week and month min/max until it will be filled
 			hlDisplayData_ticksCount = -1;
 		}
 		hlDisplayData_ticksCount += 1;
@@ -459,20 +491,22 @@ void measureThread() {
 			hlDisplayData[HLDisplayData_h1].temp = tempMinMax.max;
 			hlDisplayData[HLDisplayData_l1].temp = tempMinMax.min;
 
-			#if 0
-			if(weekMinMaxTempCircularBuffer.cycleIndex()) {
-				monthMinMaxTempCircularBuffer.cycleIndex();
+			#if 1
+			if((minMaxRollingBinaryTreeFinder.index & bitsCountToMask(minMaxRollingBinaryTreeFinder.levelMax * MinMaxRollingBinaryTreeFinder_Config::levelValuesSizeLog2)) == bitsCountToMask(minMaxRollingBinaryTreeFinder.levelMax * MinMaxRollingBinaryTreeFinder_Config::levelValuesSizeLog2)) {
+				std::optional<MinMaxRollingBinaryTreeFinder_MinMaxD> maybeWeekMinMaxTemp = CircularBuffer_addMinMax(tempMinMax, weekMinMaxTempCircularBuffer);
+				if(maybeWeekMinMaxTemp.has_value()) {
+					MinMaxRollingBinaryTreeFinder_MinMaxD weekMinMaxTemp = *maybeWeekMinMaxTemp;
+					hlDisplayData[HLDisplayData_h7].temp = weekMinMaxTemp.max;
+					hlDisplayData[HLDisplayData_l7].temp = weekMinMaxTemp.min;
+
+					std::optional<MinMaxRollingBinaryTreeFinder_MinMaxD> maybeMonthMinMaxTemp = CircularBuffer_addMinMax(weekMinMaxTemp, monthMinMaxTempCircularBuffer);
+
+					if(maybeMonthMinMaxTemp.has_value()) {
+						hlDisplayData[HLDisplayData_h30].temp = (*maybeMonthMinMaxTemp).max;
+						hlDisplayData[HLDisplayData_l30].temp = (*maybeMonthMinMaxTemp).min;
+					};
+				};
 			};
-
-			weekMinMaxTempCircularBuffer.setCurrrent(tempMinMax);
-			MinMaxRollingBinaryTreeFinder_MinMaxD weekMinMaxTemp = CircularBuffer_getMinMax(weekMinMaxTempCircularBuffer);
-			hlDisplayData[HLDisplayData_h7].temp = weekMinMaxTemp.max;
-			hlDisplayData[HLDisplayData_l7].temp = weekMinMaxTemp.min;
-
-			monthMinMaxTempCircularBuffer.setCurrrent(monthMinMaxTemp);
-			MinMaxRollingBinaryTreeFinder_MinMaxD monthMinMaxTemp = CircularBuffer_getMinMax(monthMinMaxTempCircularBuffer);
-			hlDisplayData[HLDisplayData_h30].temp = monthMinMaxTemp.max;
-			hlDisplayData[HLDisplayData_l30].temp = monthMinMaxTemp.min;
 			#endif
 		};
 	};
