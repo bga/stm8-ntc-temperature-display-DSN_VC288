@@ -311,12 +311,12 @@ FI10_6 lastTemp = lastTemp_notFilledMagicNumber;
 FU16 ticksCountLive = 0;
 
 
-void sysClockThread(Timer& timer) {
+void sysClockTask() {
 	ticksCountLive += 1;
 }
 
 FU8 display_index = 0;
-void displayThread(Timer& timer) {
+void displayTask() {
 	FU16 ticksCount = ticksCountLive;
 
 	#if 1
@@ -599,9 +599,32 @@ void measureThread(Timer& timer) {
 void timerThread(Timer& timer) {
 	timer.clearPendingInterrupt();
 
-	displayThread(timer);
-	measureThread(timer);
-	sysClockThread(timer);
+	displayTask();
+	sysClockTask();
+
+	using namespace MeasureThread;
+
+	FU16 ticksCount = ticksCountLive;
+
+	#if 0
+		displayDecrimal(ticksCount, &(display.displayChars[3]));
+		return;
+	#endif // 1
+
+
+	readAdcTask_push();
+	renderTempTask_push();
+	renderHLDisplayDataTask_push();
+	pushMinMaxRollingBinaryTreeFinderTask_forceDispatch();
+	if(0) debug debugHeartBeatTask_push();
+
+	while(!scheduler.isEmpty() && !timer.hasPendingInterrupt()) {
+		scheduler.dispatch(TaskArgs());
+	}
+
+	debug if(timer.hasPendingInterrupt()) {
+		APP__DEBUG__WRITE(F, U, L);
+	};
 }
 
 void Clock_setCpuFullSpeed() {
