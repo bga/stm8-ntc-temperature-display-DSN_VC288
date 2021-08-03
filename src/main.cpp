@@ -108,6 +108,9 @@ void Timer4_init() {
 	setBitMask(TIM4->IER, TIM4_IER_UIE); // Enable Update Interrupt
 	setBitMask(TIM4->CR1, TIM4_CR1_CEN); // Enable TIM4
 }
+Bool Timer4_hasPendingInterrupt() {
+	return hasBitMask(::STM8S_StdPeriph_Lib::TIM4->SR1, ::STM8S_StdPeriph_Lib::TIM4_SR1_UIF);
+}
 
 #if 1
 template<class IntAtg>
@@ -148,6 +151,12 @@ Bool AdcUser_checkWrongValue(Adc_Value v) {
 typedef ::Bga::Mcu::Display::Text::_7Segment_CommonCathode<6, Config::Display> Display;
 
 Display display;
+
+#define APP__DEBUG__WRITE(C0Arg, C1Arg, C2Arg) ( \
+	(display.displayChars[3] = _7SegmentsFont::C0Arg), \
+	(display.displayChars[4] = _7SegmentsFont::C1Arg), \
+	(display.displayChars[5] = _7SegmentsFont::C2Arg), \
+0)
 
 FU16 get10Power(FU16 x, FU16 max) {
 	FU16 ret = 1;
@@ -570,13 +579,21 @@ void measureThread() {
 		return;
 	#endif // 1
 
+
 	readAdcTask_push();
 	renderTempTask_push();
 	renderHLDisplayDataTask_push();
 	pushMinMaxRollingBinaryTreeFinderTask_forceDispatch();
 	if(0) debug debugHeartBeatTask_push();
 
-	forInc(FU8, i, 0, MeasureThread_maxTaskDispatchesPerTick) scheduler.dispatch(TaskArgs());
+	while(!scheduler.isEmpty() && !Timer4_hasPendingInterrupt()) {
+		scheduler.dispatch(TaskArgs());
+	}
+
+	debug if(Timer4_hasPendingInterrupt()) {
+		APP__DEBUG__WRITE(F, U, L);
+	};
+
 }
 
 BGA__MCU__HAL__ISR(STM8S_STDPERIPH_LIB__TIM4_ISR) {
