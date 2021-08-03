@@ -101,7 +101,7 @@ template<UIntMax ticksCountPerSAproxArg> struct Timer4 {
 	}
 };
 
-struct  Timer: public Timer4<1600UL> {
+struct  Timer: public Timer4<Config::renderTempTask_freqAprox> {
 
 } timer;
 
@@ -342,7 +342,7 @@ namespace MeasureThread {
 	};
 
 
-	enum { adcFetchPeriod = (1 << (Config::AdcUser_fetchSpeedPrescaler)) };
+	enum { readAdcTask_fetchPeriod = msToTicksCount(Config::readAdcTask_fetchPeriod_ms) };
 	FU16 adcTicksCount = 0;
 
 	RunningAvg<FU16[Config::AdcUser_adcsSize], FU32> tempAdcRunningAvg;
@@ -350,7 +350,7 @@ namespace MeasureThread {
 
 	void readAdcTask(TaskArgs taskArgs);
 	void readAdcTask_push() {
-		if(adcFetchPeriod <= (adcTicksCount += 1)) {
+		if(readAdcTask_fetchPeriod <= (adcTicksCount += 1)) {
 			adcTicksCount = 0;
 			scheduler.push(readAdcTask);
 		};
@@ -458,8 +458,8 @@ namespace MeasureThread {
 
 	struct MinMaxRollingBinaryTreeFinder_Config {
 		enum {
-			levelMax = 8,
-			levelValuesSizeLog2 = 2,
+			levelMax = Config::MinMaxRollingBinaryTreeFinder_Config_levelMax,
+			levelValuesSizeLog2 = Config::MinMaxRollingBinaryTreeFinder_Config_levelValuesSizeLog2,
 		};
 
 		typedef FU16 Index;
@@ -469,9 +469,14 @@ namespace MeasureThread {
 	};
 
 	enum {
-		// MinMaxRollingBinaryTreeFinder_pushInterval = msToTicksCount((60UL * 60 * 24 * 1000) >> (MinMaxRollingBinaryTreeFinder_Config::levelMax * MinMaxRollingBinaryTreeFinder_Config::levelValuesSizeLog2)),
-		MinMaxRollingBinaryTreeFinder_pushInterval = msToTicksCount((60UL * 60 * 1 * 1000) >> (MinMaxRollingBinaryTreeFinder_Config::levelMax * MinMaxRollingBinaryTreeFinder_Config::levelValuesSizeLog2)),
-		MinMaxRollingBinaryTreeFinder_forceUpdateLog2 = 4,
+		MinMaxRollingBinaryTreeFinder_pushInterval = (
+			#if 1
+				msToTicksCount(Config::MinMaxRollingBinaryTreeFinder_pushInterval_ms)
+			#else
+				0 //# for debug
+			#endif
+		),
+		MinMaxRollingBinaryTreeFinder_forceUpdateLog2 = Config::MinMaxRollingBinaryTreeFinder_forceUpdateLog2,
 	};
 
 	FU16 MinMaxRollingBinaryTreeFinder_ticksCount = 0;

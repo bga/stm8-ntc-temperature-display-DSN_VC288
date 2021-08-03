@@ -18,24 +18,43 @@
 
 
 namespace App { namespace Config {
-	enum { 
-		tempDisplayCharIndex = 0,  
-		hlDisplayDataCharIndex = 3, 
+	enum {
+		tempDisplayCharIndex = 0,
+		hlDisplayDataCharIndex = 3,
 	};
 
 	enum {
-		AdcUser_fetchSpeedPrescaler = 6,
-		
 		AdcUser_adcsSize = 32,
-		
+
 		AdcUser_minValue = 100,
 		AdcUser_maxValue = 1000,
 	};
 
+	enum {
+		renderTempTask_freqAprox = 1600UL,
+	};
+
+	enum {
+		MinMaxRollingBinaryTreeFinder_dayPeriod_ms = 60UL * 60 * 24 * 1000,
+		MinMaxRollingBinaryTreeFinder_Config_levelMax = 8,
+		MinMaxRollingBinaryTreeFinder_Config_levelValuesSizeLog2 = 2,
+		MinMaxRollingBinaryTreeFinder_pushInterval_ms = (MinMaxRollingBinaryTreeFinder_dayPeriod_ms >> (MinMaxRollingBinaryTreeFinder_Config_levelMax * MinMaxRollingBinaryTreeFinder_Config_levelValuesSizeLog2)),
+
+		User_minPossibleDisplayUpdatePeriod_ms = 500,
+
+		readAdcTask_fetchPeriod_ms = (
+			BGA__MATH__MIN(User_minPossibleDisplayUpdatePeriod_ms, MinMaxRollingBinaryTreeFinder_pushInterval_ms)
+			/ (AdcUser_adcsSize / 2) //# fill adc data at least half for each minmax data push
+		),
+
+		MinMaxRollingBinaryTreeFinder_forceUpdateLog2 = 4,
+
+	};
+
 	using namespace ::Bga::Mcu::Hal;
-	
+
 	struct Display {
-		
+
 		Pin::PullHiZ<(::STM8S_StdPeriph_Lib::GPIOD_BaseAddress), 5> m_digit2CathodeGpioPort;
 		Pin::PullHiZ<(::STM8S_StdPeriph_Lib::GPIOD_BaseAddress), 6> m_digit1CathodeGpioPort;
 		Pin::PullHiZ<(::STM8S_StdPeriph_Lib::GPIOD_BaseAddress), 4> m_digit0CathodeGpioPort;
@@ -53,7 +72,7 @@ namespace App { namespace Config {
 		Pin::PushPull<(::STM8S_StdPeriph_Lib::GPIOD_BaseAddress), 1> m_digit6AnodeGpioPort;
 		Pin::PushPull<(::STM8S_StdPeriph_Lib::GPIOC_BaseAddress), 5> m_digitDotAnodeGpioPort;
 	};
-	
+
 	Pin::AdcWithEnable<(::STM8S_StdPeriph_Lib::GPIOD_BaseAddress), 3, 4, 24 /* us */> tempAdcGpioPort;
 	Pin::PushPull<(::STM8S_StdPeriph_Lib::GPIOD_BaseAddress), 2> tempAdcGpioVccPort;
 } } //# namespace

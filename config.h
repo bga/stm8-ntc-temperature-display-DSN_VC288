@@ -8,3 +8,5 @@
 //# to define xINTn_C macros in stdint.h
 #define __STDC_CONSTANT_MACROS
 
+//# enumerated type mixed with another enumerated type
+#pragma diag_suppress=Pa089
