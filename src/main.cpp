@@ -64,11 +64,11 @@ enum {
 	UserError_badEeprom = 0,
 };
 
-template<UIntMax ticksCountPerSAproxArg, UInt arrMaxArg, UInt prescalerMaxArg> struct TimerCalc {
+template<UIntMax ticksCountPerSAproxArg> struct Timer4 {
 	enum {
 		ticksCountPerSAprox = ticksCountPerSAproxArg,
-		arrMax = arrMaxArg,
-		prescalerMax = prescalerMaxArg,
+		arrMax = (1UL << 8) - 1,
+		prescalerMax = (1UL << 3) - 1,
 
 		_2PowPrescalerAprox = F_CPU / ticksCountPerSAprox / arrMax,
 		prescalerPossibleMax = log2Static(_2PowPrescalerAprox),
@@ -80,36 +80,36 @@ template<UIntMax ticksCountPerSAproxArg, UInt arrMaxArg, UInt prescalerMaxArg> s
 
 	static_assert_lt(0, arr);
 	static_assert_lte(arr, arrMax);
+
+	void init() {
+		using namespace ::STM8S_StdPeriph_Lib;
+		TIM4->PSCR = prescaler;
+
+		TIM4->ARR = arr;
+
+		setBitMask(TIM4->IER, TIM4_IER_UIE); // Enable Update Interrupt
+		setBitMask(TIM4->CR1, TIM4_CR1_CEN); // Enable TIM4
+	}
+	Bool hasPendingInterrupt() const {
+		return hasBitMask(::STM8S_StdPeriph_Lib::TIM4->SR1, ::STM8S_StdPeriph_Lib::TIM4_SR1_UIF);
+	}
+	Bool clearPendingInterrupt() {
+		return clearBitMask(::STM8S_StdPeriph_Lib::TIM4->SR1, ::STM8S_StdPeriph_Lib::TIM4_SR1_UIF);
+	}
+	FU8 readCounter() const {
+		return ::STM8S_StdPeriph_Lib::TIM4->CNTR;
+	}
 };
 
-typedef TimerCalc<1600UL, (1UL << 16) - 1, (1UL << 4) - 1> Tim2Calc;
-typedef TimerCalc<1600UL, (1UL << 8) - 1, (1UL << 3) - 1> Tim4Calc;
+struct  Timer: public Timer4<1600UL> {
 
-#define msToTicksCount(msArg) (Tim4Calc::ticksCountPerSReal * (msArg) / 1000UL)
+} timer;
 
-void Timer2_init() {
-	using namespace ::STM8S_StdPeriph_Lib;
-	TIM2->PSCR = Tim2Calc::prescaler;
-	// TIM2->EGR = TIM2_EGR_UG;
+#define msToTicksCount(msArg) (Timer::ticksCountPerSReal * (msArg) / 1000UL)
 
-	TIM2->ARRH = U8(Tim2Calc::arr >> 8);
-	TIM2->ARRL = U8(Tim2Calc::arr);
-
-	setBitMask(TIM2->IER, TIM2_IER_UIE); // Enable Update Interrupt
-	setBitMask(TIM2->CR1, TIM2_CR1_CEN); // Enable TIM2
-	clearBitMask(TIM2->SR1, TIM2_SR1_UIF);
-}
-void Timer4_init() {
-	using namespace ::STM8S_StdPeriph_Lib;
-	TIM4->PSCR = Tim4Calc::prescaler;
-
-	TIM4->ARR = Tim4Calc::arr;
-
-	setBitMask(TIM4->IER, TIM4_IER_UIE); // Enable Update Interrupt
-	setBitMask(TIM4->CR1, TIM4_CR1_CEN); // Enable TIM4
-}
-Bool Timer4_hasPendingInterrupt() {
-	return hasBitMask(::STM8S_StdPeriph_Lib::TIM4->SR1, ::STM8S_StdPeriph_Lib::TIM4_SR1_UIF);
+void timerThread(Timer& timer);
+BGA__MCU__HAL__ISR(STM8S_STDPERIPH_LIB__TIM4_ISR) {
+	timerThread(timer);
 }
 
 #if 1
@@ -311,12 +311,12 @@ FI10_6 lastTemp = lastTemp_notFilledMagicNumber;
 FU16 ticksCountLive = 0;
 
 
-void sysClockThread() {
+void sysClockThread(Timer& timer) {
 	ticksCountLive += 1;
 }
 
 FU8 display_index = 0;
-void displayThread() {
+void displayThread(Timer& timer) {
 	FU16 ticksCount = ticksCountLive;
 
 	#if 1
@@ -569,7 +569,7 @@ namespace MeasureThread {
 	MeasureThread_Scheduler scheduler(tasks, arraySize(tasks));
 }
 
-void measureThread() {
+void measureThread(Timer& timer) {
 	using namespace MeasureThread;
 
 	FU16 ticksCount = ticksCountLive;
@@ -586,27 +586,22 @@ void measureThread() {
 	pushMinMaxRollingBinaryTreeFinderTask_forceDispatch();
 	if(0) debug debugHeartBeatTask_push();
 
-	while(!scheduler.isEmpty() && !Timer4_hasPendingInterrupt()) {
+	while(!scheduler.isEmpty() && !timer.hasPendingInterrupt()) {
 		scheduler.dispatch(TaskArgs());
 	}
 
-	debug if(Timer4_hasPendingInterrupt()) {
+	debug if(timer.hasPendingInterrupt()) {
 		APP__DEBUG__WRITE(F, U, L);
 	};
 
 }
 
-BGA__MCU__HAL__ISR(STM8S_STDPERIPH_LIB__TIM4_ISR) {
-	clearBitMask(::STM8S_StdPeriph_Lib::TIM4->SR1, ::STM8S_StdPeriph_Lib::TIM4_SR1_UIF);
+void timerThread(Timer& timer) {
+	timer.clearPendingInterrupt();
 
-	displayThread();
-	measureThread();
-	sysClockThread();
-}
-BGA__MCU__HAL__ISR(STM8S_STDPERIPH_LIB__TIM2_OVF_ISR) {
-	clearBitMask(::STM8S_StdPeriph_Lib::TIM2->SR1, ::STM8S_StdPeriph_Lib::TIM2_SR1_UIF);
-
-	measureThread();
+	displayThread(timer);
+	measureThread(timer);
+	sysClockThread(timer);
 }
 
 void Clock_setCpuFullSpeed() {
@@ -645,8 +640,7 @@ void main() {
 	Config::tempAdcGpioPort.init();
 	Config::tempAdcGpioVccPort.init();
 
-	// Timer2_init();
-	Timer4_init();
+	timer.init();
 	::STM8S_StdPeriph_Lib::enableInterrupts();
 
 	while(1) {
