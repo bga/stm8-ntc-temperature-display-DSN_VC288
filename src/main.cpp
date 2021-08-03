@@ -512,7 +512,7 @@ namespace MeasureThread {
 
 	void pushMinMaxRollingBinaryTreeFinderTask(TaskArgs taskArgs);
 	void pushMinMaxRollingBinaryTreeFinderTask_forceDispatch() {
-		if(MinMaxRollingBinaryTreeFinder_pushInterval <= MinMaxRollingBinaryTreeFinder_ticksCount++ && lastTemp != lastTemp_notFilledMagicNumber) {
+		if(lastTemp != lastTemp_notFilledMagicNumber && MinMaxRollingBinaryTreeFinder_pushInterval <= MinMaxRollingBinaryTreeFinder_ticksCount++) {
 			MinMaxRollingBinaryTreeFinder_ticksCount = 0;
 			pushMinMaxRollingBinaryTreeFinderTask(TaskArgs());
 		};
