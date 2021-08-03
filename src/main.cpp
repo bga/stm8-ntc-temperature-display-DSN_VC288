@@ -350,7 +350,7 @@ namespace MeasureThread {
 
 	void readAdcTask(TaskArgs taskArgs);
 	void readAdcTask_push() {
-		if(adcFetchPeriod <= adcTicksCount++) {
+		if(adcFetchPeriod <= (adcTicksCount += 1)) {
 			adcTicksCount = 0;
 			scheduler.push(readAdcTask);
 		};
@@ -512,7 +512,7 @@ namespace MeasureThread {
 
 	void pushMinMaxRollingBinaryTreeFinderTask(TaskArgs taskArgs);
 	void pushMinMaxRollingBinaryTreeFinderTask_forceDispatch() {
-		if(lastTemp != lastTemp_notFilledMagicNumber && MinMaxRollingBinaryTreeFinder_pushInterval <= MinMaxRollingBinaryTreeFinder_ticksCount++) {
+		if(lastTemp != lastTemp_notFilledMagicNumber && MinMaxRollingBinaryTreeFinder_pushInterval <= (MinMaxRollingBinaryTreeFinder_ticksCount += 1)) {
 			MinMaxRollingBinaryTreeFinder_ticksCount = 0;
 			pushMinMaxRollingBinaryTreeFinderTask(TaskArgs());
 		};
