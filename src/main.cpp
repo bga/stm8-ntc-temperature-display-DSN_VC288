@@ -569,33 +569,6 @@ namespace MeasureThread {
 	MeasureThread_Scheduler scheduler(tasks, arraySize(tasks));
 }
 
-void measureThread(Timer& timer) {
-	using namespace MeasureThread;
-
-	FU16 ticksCount = ticksCountLive;
-
-	#if 0
-		displayDecrimal(ticksCount, &(display.displayChars[3]));
-		return;
-	#endif // 1
-
-
-	readAdcTask_push();
-	renderTempTask_push();
-	renderHLDisplayDataTask_push();
-	pushMinMaxRollingBinaryTreeFinderTask_forceDispatch();
-	if(0) debug debugHeartBeatTask_push();
-
-	while(!scheduler.isEmpty() && !timer.hasPendingInterrupt()) {
-		scheduler.dispatch(TaskArgs());
-	}
-
-	debug if(timer.hasPendingInterrupt()) {
-		APP__DEBUG__WRITE(F, U, L);
-	};
-
-}
-
 void timerThread(Timer& timer) {
 	timer.clearPendingInterrupt();
 
