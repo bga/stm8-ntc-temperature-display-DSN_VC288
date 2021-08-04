@@ -491,27 +491,14 @@ namespace MeasureThread {
 	CircularBuffer_Dynamic<MinMaxRollingBinaryTreeFinder_MinMaxD, FU8> monthMinMaxTempCircularBuffer(monthMinMaxTempCircularBuffer_data, arraySize(monthMinMaxTempCircularBuffer_data));
 
 
-	MinMaxRollingBinaryTreeFinder_MinMaxD CircularBuffer_findMinMax(MinMaxRollingBinaryTreeFinder_MinMaxD* data, Size dataSize) {
-		return minMaxRollingBinaryTreeFinder.fromArray(data, dataSize);
-	}
-
-	std::optional<MinMaxRollingBinaryTreeFinder_MinMaxD> CircularBuffer_addMinMax(const MinMaxRollingBinaryTreeFinder_MinMaxD& minMax, CircularBuffer_Dynamic<MinMaxRollingBinaryTreeFinder_MinMaxD, FU8>& circularBuffer) {
-		Bool isInit = false;
-		if(!circularBuffer.isInited()) {
-			circularBuffer.init();
-			isInit = true;
-		};
-
-		circularBuffer.add(minMax);
-
-		if(isInit) {
+	MinMaxRollingBinaryTreeFinder_MinMaxD CircularBuffer_addMinMax(const MinMaxRollingBinaryTreeFinder_MinMaxD& minMax, CircularBuffer_Dynamic<MinMaxRollingBinaryTreeFinder_MinMaxD, FU8>& circularBuffer) {
+		if(circularBuffer.initAndPrefill(minMax)) {
 			return minMax;
 		}
-		else if(circularBuffer.isCarry()) {
-			return CircularBuffer_findMinMax(circularBuffer.data, circularBuffer.size);
-		}
 		else {
-			return std::nullopt;
+			circularBuffer.add(minMax);
+
+			return MinMaxRollingBinaryTreeFinder_MinMaxD::fromArray(circularBuffer.data, circularBuffer.size);
 		}
 	}
 
@@ -527,19 +514,21 @@ namespace MeasureThread {
 		if(minMaxRollingBinaryTreeFinder.isCarry(MinMaxRollingBinaryTreeFinder_forceUpdateLog2)) {
 			#if 1
 			if(HLDisplayData_isNotFilled() || minMaxRollingBinaryTreeFinder.isCarry(0)) {
-				std::optional<MinMaxRollingBinaryTreeFinder_MinMaxD> maybeWeekMinMaxTemp = CircularBuffer_addMinMax(tempMinMax, weekMinMaxTempCircularBuffer);
-				if(maybeWeekMinMaxTemp.has_value()) {
-					MinMaxRollingBinaryTreeFinder_MinMaxD weekMinMaxTemp = *maybeWeekMinMaxTemp;
-					hlDisplayData[HLDisplayData_h7].temp = weekMinMaxTemp.max;
-					hlDisplayData[HLDisplayData_l7].temp = weekMinMaxTemp.min;
+				MinMaxRollingBinaryTreeFinder_MinMaxD weekMinMaxTemp = CircularBuffer_addMinMax(tempMinMax, weekMinMaxTempCircularBuffer);
+				hlDisplayData[HLDisplayData_h7].temp = weekMinMaxTemp.max;
+				hlDisplayData[HLDisplayData_l7].temp = weekMinMaxTemp.min;
 
-					std::optional<MinMaxRollingBinaryTreeFinder_MinMaxD> maybeMonthMinMaxTemp = CircularBuffer_addMinMax(weekMinMaxTemp, monthMinMaxTempCircularBuffer);
+				monthMinMaxTempCircularBuffer.initAndPrefill(weekMinMaxTemp);
 
-					if(maybeMonthMinMaxTemp.has_value()) {
-						hlDisplayData[HLDisplayData_h30].temp = (*maybeMonthMinMaxTemp).max;
-						hlDisplayData[HLDisplayData_l30].temp = (*maybeMonthMinMaxTemp).min;
-					};
+				if(weekMinMaxTempCircularBuffer.isCarry()) {
+					monthMinMaxTempCircularBuffer.cycleIndex();
 				};
+				monthMinMaxTempCircularBuffer.setCurrent(weekMinMaxTemp);
+
+				MinMaxRollingBinaryTreeFinder_MinMaxD monthMinMaxTemp = MinMaxRollingBinaryTreeFinder_MinMaxD::fromArray(monthMinMaxTempCircularBuffer.data, monthMinMaxTempCircularBuffer.size);
+
+				hlDisplayData[HLDisplayData_h30].temp = monthMinMaxTemp.max;
+				hlDisplayData[HLDisplayData_l30].temp = monthMinMaxTemp.min;
 			};
 			#endif
 
