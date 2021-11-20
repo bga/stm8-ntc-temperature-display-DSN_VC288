@@ -16,6 +16,11 @@
 
 // #define BGA__ENABLE_STATIC_PRINT
 
+#pragma diag_suppress=Pe047
+//# fix for codeblocks code competent
+#define __cplusplus __cplusplus
+#pragma diag_default=Pe047
+
 #include <!cpp/wrapper/cstring>
 #include <!cpp/wrapper/optional>
 // #include <STM8S_StdPeriph_Driver/stm8s.h>
