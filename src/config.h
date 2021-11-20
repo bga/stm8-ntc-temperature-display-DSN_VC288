@@ -73,6 +73,11 @@ namespace App { namespace Config {
 		Pin::PushPull<(::STM8S_StdPeriph_Lib::GPIOC_BaseAddress), 5> m_digitDotAnodeGpioPort;
 	};
 
+	struct DebugEnableTest {
+		Pin::PushPull<(::STM8S_StdPeriph_Lib::GPIOD_BaseAddress), 2> m_gndPin;
+		Pin::PullUp<(::STM8S_StdPeriph_Lib::GPIOD_BaseAddress), 3> m_pullUpPin;
+	} debugEnableTest;
+
 	Pin::AdcWithEnable<(::STM8S_StdPeriph_Lib::GPIOD_BaseAddress), 6, 6, 24 /* us */> tempAdcGpioPort;
 	Pin::PushPull<(::STM8S_StdPeriph_Lib::GPIOD_BaseAddress), 5> tempAdcGpioVccPort;
 } } //# namespace

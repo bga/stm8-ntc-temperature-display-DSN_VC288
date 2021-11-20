@@ -27,6 +27,7 @@
 #include <!hal/Adc.h>
 #include <!hal/Pin/PushPull.h>
 #include <!hal/Pin/PullHiZ.h>
+#include <!hal/Pin/PullUp.h>
 #include <!hal/Pin/AdcWithEnable.h>
 
 #include <!cpp/bitManipulations.h>
@@ -59,6 +60,7 @@ namespace App {
 
 using namespace Bga::Mcu::Hal;
 
+Bool isDebugMode = false;
 
 enum {
 	UserError_badEeprom = 0,
@@ -387,15 +389,18 @@ namespace MeasureThread {
 		}
 		else {
 			FU16 adcAvg = tempAdcRunningAvg.computeAvg();
-			debug displayDecrimal(adcAvg, &(display.displayChars[3]));
+			if(isDebugMode) {
+				displayDecrimal(adcAvg, &(display.displayChars[Config::tempDisplayCharIndex]));
+			}
+			else {
+				FU16 rH = rrToRh(adcAvg, settings.rDiv);
+				FI10_6 temp = settings.tempAdcFix.m_ntcThermistor.convert(rH);
 
-			FU16 rH = rrToRh(adcAvg, settings.rDiv);
-			FI10_6 temp = settings.tempAdcFix.m_ntcThermistor.convert(rH);
-
-			if(lastTemp == lastTemp_notFilledMagicNumber || settings.tempHysteresis < Math_abs(temp - lastTemp)) {
-				lastTemp = temp;
-				A::convertAndDisplayRawTemp(temp, &(display.displayChars[Config::tempDisplayCharIndex]));
-			};
+				if(lastTemp == lastTemp_notFilledMagicNumber || settings.tempHysteresis < Math_abs(temp - lastTemp)) {
+					lastTemp = temp;
+					A::convertAndDisplayRawTemp(temp, &(display.displayChars[Config::tempDisplayCharIndex]));
+				};
+			}
 		}
 	}
 
@@ -578,7 +583,6 @@ void timerThread(Timer& timer) {
 		return;
 	#endif // 1
 
-
 	readAdcTask_push();
 	renderTempTask_push();
 	renderHLDisplayDataTask_push();
@@ -607,10 +611,29 @@ void Hw_enable() {
 }
 
 
+inline Bool getIsDebugMode() {
+	
+	Bool ret = false;
+	Config::debugEnableTest.m_gndPin.off();
+	delay_us(10);
+	//# wait until release
+	while(Config::debugEnableTest.m_pullUpPin.read() == 0) {
+		ret = true;
+	}
+	return ret;
+} 
+
 void main() {
 
 	Clock_setCpuFullSpeed();
 	Hw_enable();
+	
+	#if 1
+	Config::debugEnableTest.m_gndPin.init();
+	Config::debugEnableTest.m_pullUpPin.init();
+	isDebugMode = getIsDebugMode();
+	#endif // 0
+	
 	display.init();
 
 	//# test data for display
