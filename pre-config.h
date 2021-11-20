@@ -10,3 +10,6 @@
 
 //# enumerated type mixed with another enumerated type
 #pragma diag_suppress=Pa089
+//# variable is never used
+#pragma diag_suppress=Pe550
+#pragma diag_suppress=Pe177
