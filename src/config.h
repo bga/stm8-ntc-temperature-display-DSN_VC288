@@ -55,8 +55,8 @@ namespace App { namespace Config {
 
 	struct Display {
 
-		Pin::PullHiZ<(::STM8S_StdPeriph_Lib::GPIOD_BaseAddress), 5> m_digit2CathodeGpioPort;
-		Pin::PullHiZ<(::STM8S_StdPeriph_Lib::GPIOD_BaseAddress), 6> m_digit1CathodeGpioPort;
+		Pin::PullHiZ<(::STM8S_StdPeriph_Lib::GPIOD_BaseAddress), 3> m_digit2CathodeGpioPort;
+		Pin::PullHiZ<(::STM8S_StdPeriph_Lib::GPIOD_BaseAddress), 2> m_digit1CathodeGpioPort;
 		Pin::PullHiZ<(::STM8S_StdPeriph_Lib::GPIOD_BaseAddress), 4> m_digit0CathodeGpioPort;
 		Pin::PullHiZ<(::STM8S_StdPeriph_Lib::GPIOA_BaseAddress), 1> m_digit5CathodeGpioPort;
 		Pin::PullHiZ<(::STM8S_StdPeriph_Lib::GPIOB_BaseAddress), 4> m_digit4CathodeGpioPort;
@@ -73,6 +73,6 @@ namespace App { namespace Config {
 		Pin::PushPull<(::STM8S_StdPeriph_Lib::GPIOC_BaseAddress), 5> m_digitDotAnodeGpioPort;
 	};
 
-	Pin::AdcWithEnable<(::STM8S_StdPeriph_Lib::GPIOD_BaseAddress), 3, 4, 24 /* us */> tempAdcGpioPort;
-	Pin::PushPull<(::STM8S_StdPeriph_Lib::GPIOD_BaseAddress), 2> tempAdcGpioVccPort;
+	Pin::AdcWithEnable<(::STM8S_StdPeriph_Lib::GPIOD_BaseAddress), 6, 6, 24 /* us */> tempAdcGpioPort;
+	Pin::PushPull<(::STM8S_StdPeriph_Lib::GPIOD_BaseAddress), 5> tempAdcGpioVccPort;
 } } //# namespace
