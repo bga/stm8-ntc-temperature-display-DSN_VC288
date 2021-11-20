@@ -397,21 +397,19 @@ namespace MeasureThread {
 		}
 		else {
 			FU16 adcAvg = tempAdcRunningAvg.computeAvg();
-			if(isDebugMode) {
-				displayDecrimal6(adcAvg, &(display.displayChars[Config::tempDisplayCharIndex]));
-			}
-			else {
-				FU16 rH = rrToRh(adcAvg, settings.rDiv);
-				FI10_6 temp = settings.tempAdcFix.m_ntcThermistor.convert(rH);
+			FU16 rH = rrToRh(adcAvg, settings.rDiv);
+			FI10_6 temp = settings.tempAdcFix.m_ntcThermistor.convert(rH);
 
-				if(lastTemp == lastTemp_notFilledMagicNumber || settings.tempHysteresis < Math_abs(temp - lastTemp)) {
-					lastTemp = temp;
-					A::convertAndDisplayRawTemp(temp, &(display.displayChars[Config::tempDisplayCharIndex]));
-				};
-			}
+			if(lastTemp == lastTemp_notFilledMagicNumber || settings.tempHysteresis < Math_abs(temp - lastTemp)) {
+				lastTemp = temp;
+				A::convertAndDisplayRawTemp(temp, &(display.displayChars[Config::tempDisplayCharIndex]));
+			};
 		}
 	}
 
+	void adcDump() {
+		displayDecrimal6(tempAdcRunningAvg.computeAvg(), &(display.displayChars[0]));
+	}
 
 	enum {
 		HLDisplayData_h1 = 0,
@@ -592,9 +590,15 @@ void timerThread(Timer& timer) {
 	#endif // 1
 
 	readAdcTask_push();
-	renderTempTask_push();
-	renderHLDisplayDataTask_push();
-	pushMinMaxRollingBinaryTreeFinderTask_forceDispatch();
+	if(isDebugMode) {
+		adcDump();
+	}
+	else {
+		renderTempTask_push();
+		renderHLDisplayDataTask_push();
+		pushMinMaxRollingBinaryTreeFinderTask_forceDispatch();
+		
+	}
 	if(0) debug debugHeartBeatTask_push();
 
 	while(!scheduler.isEmpty() && !timer.hasPendingInterrupt()) {
@@ -619,16 +623,17 @@ void Hw_enable() {
 }
 
 
-inline Bool getIsDebugMode() {
+inline FU16 getServiceModePinShortageTime_ms() {
 	
-	Bool ret = false;
+	FU16 time = 0;
 	Config::debugEnableTest.m_gndPin.off();
 	delay_us(10);
 	//# wait until release
 	while(Config::debugEnableTest.m_pullUpPin.read() == 0) {
-		ret = true;
+		delay_ms(1);
+		time += 1;
 	}
-	return ret;
+	return time;
 } 
 
 void main() {
@@ -639,7 +644,13 @@ void main() {
 	#if 1
 	Config::debugEnableTest.m_gndPin.init();
 	Config::debugEnableTest.m_pullUpPin.init();
-	isDebugMode = getIsDebugMode();
+	FU16 serviceModePinShortageTime_ms = getServiceModePinShortageTime_ms();
+	if(serviceModePinShortageTime_ms == 0) {
+		//# normal mode
+	}
+	else {
+		isDebugMode = true;
+	};
 	#endif // 0
 	
 	display.init();
