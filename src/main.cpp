@@ -16,6 +16,9 @@
 
 // #define BGA__ENABLE_STATIC_PRINT
 
+//# explicit include for codeblocks
+#include "../pre-config.h"
+
 #pragma diag_suppress=Pe047
 //# fix for codeblocks code competent
 #define __cplusplus __cplusplus
