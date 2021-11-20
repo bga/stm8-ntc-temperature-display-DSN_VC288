@@ -4,7 +4,7 @@
 	<Project>
 		<Option title="firmware_cb" />
 		<Option pch_mode="2" />
-		<Option compiler="cygwin" />
+		<Option compiler="iar_stm8_compiler" />
 		<Build>
 			<Target title="Debug">
 				<Option output="bin/Debug/firmware_cb" prefix_auto="1" extension_auto="1" />
@@ -27,14 +27,22 @@
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
+			<Add option="-D__cplusplus" />
+			<Add option="-DSTM8S103" />
+			<Add option="-DF_CPU=16000000UL" />
+			<Add directory="../lib/!cpp/include" />
+			<Add directory="../lib/!stm8/include" />
+			<Add directory="../lib/!mcu/include" />
 		</Compiler>
+		<Unit filename="../pre-config.h" />
 		<Unit filename="../src/_7SegmentsFont.h" />
+		<Unit filename="../src/config.h" />
 		<Unit filename="../src/main.cpp" />
 		<Extensions>
 			<code_completion>
 				<search_path add="..\lib\!cpp\include" />
-				<search_path add="..\lib\!stm8\include" />
-				<search_path add="..\lib\!mcu\include" />
+				<search_path add="../lib/!stm8/include" />
+				<search_path add="../lib/!mcu/include" />
 			</code_completion>
 			<envvars />
 			<debugger />
