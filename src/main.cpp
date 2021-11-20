@@ -229,6 +229,9 @@ FU16 rrToRh(FU16 adc, FU16 rL) {
 	return FU32(rL) * (Adc_maxValue - adc) / adc;
 //	return rL * (Adc_maxValue / adc - 1);
 }
+FU16 rrToRl(FU16 adc, FU16 rH) {
+	return FU32(rH) * adc / (Adc_maxValue - adc);
+}
 
 
 void displayDecrimal(FU16 x, FU8* dest) {
@@ -397,8 +400,8 @@ namespace MeasureThread {
 		}
 		else {
 			FU16 adcAvg = tempAdcRunningAvg.computeAvg();
-			FU16 rH = rrToRh(adcAvg, settings.rDiv);
-			FI10_6 temp = settings.tempAdcFix.m_ntcThermistor.convert(rH);
+			FU16 rT = rrToRl(adcAvg, settings.rDiv);
+			FI10_6 temp = settings.tempAdcFix.m_ntcThermistor.convert(rT);
 
 			if(lastTemp == lastTemp_notFilledMagicNumber || settings.tempHysteresis < Math_abs(temp - lastTemp)) {
 				lastTemp = temp;
