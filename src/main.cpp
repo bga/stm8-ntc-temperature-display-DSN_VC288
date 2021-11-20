@@ -398,7 +398,7 @@ namespace MeasureThread {
 		else {
 			FU16 adcAvg = tempAdcRunningAvg.computeAvg();
 			if(isDebugMode) {
-				displayDecrimal(adcAvg, &(display.displayChars[Config::tempDisplayCharIndex]));
+				displayDecrimal6(adcAvg, &(display.displayChars[Config::tempDisplayCharIndex]));
 			}
 			else {
 				FU16 rH = rrToRh(adcAvg, settings.rDiv);
