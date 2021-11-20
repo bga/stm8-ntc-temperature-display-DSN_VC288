@@ -252,7 +252,7 @@
                 </option>
                 <option>
                     <name>PreInclude</name>
-                    <state>$PROJ_DIR$\..\config.h</state>
+                    <state>$PROJ_DIR$\..\pre-config.h</state>
                 </option>
                 <option>
                     <name>CCIncludePath2</name>
@@ -1055,7 +1055,7 @@
                 </option>
                 <option>
                     <name>PreInclude</name>
-                    <state>$PROJ_DIR$\..\config.h</state>
+                    <state>$PROJ_DIR$\..\pre-config.h</state>
                 </option>
                 <option>
                     <name>CCIncludePath2</name>
