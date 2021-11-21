@@ -153,6 +153,8 @@ FU16 divmod10(FU16& in) {
 }
 #endif // 1
 
+static const Adc_Value Adc_maxValueOversampled = Adc_maxValue << Config::AdcUser_oversampleExtraBitsCount;
+
 
 Bool AdcUser_checkWrongValue(Adc_Value v) {
 	return Config::AdcUser_minValue <= v && v <= Config::AdcUser_maxValue;
@@ -226,11 +228,11 @@ STM8S_STDPERIPH_LIB__EEPROM const Settings defaultSettings = {
 Settings const& settings = ((Settings*)(&defaultSettings))[0];
 
 FU16 rrToRh(FU16 adc, FU16 rL) {
-	return FU32(rL) * (Adc_maxValue - adc) / adc;
+	return FU32(rL) * (Adc_maxValueOversampled - adc) / adc;
 //	return rL * (Adc_maxValue / adc - 1);
 }
 FU16 rrToRl(FU16 adc, FU16 rH) {
-	return FU32(rH) * adc / (Adc_maxValue - adc);
+	return FU32(rH) * adc / (Adc_maxValueOversampled - adc);
 }
 
 
@@ -358,7 +360,7 @@ namespace MeasureThread {
 	enum { readAdcTask_fetchPeriod = msToTicksCount(Config::readAdcTask_fetchPeriod_ms) };
 	FU16 adcTicksCount = 0;
 
-	RunningAvg<FU16[Config::AdcUser_adcsSize], FU32> tempAdcRunningAvg;
+	RunningAvg<Adc_Value[Config::AdcUser_adcsSize], Config::AdcUser_RunningAvgSumType> tempAdcRunningAvg;
 	Bool tempAdc_isHwError;
 
 	void readAdcTask(TaskArgs taskArgs);
@@ -370,7 +372,11 @@ namespace MeasureThread {
 	}
 	void readAdcTask(TaskArgs taskArgs) {
 		Config::tempAdcGpioVccPort.on();
-		Adc_Value t = Config::tempAdcGpioPort.readSync();
+		Adc_Value t = 0;
+		forInc(FU8, i, 0, (1 << (2 * Config::AdcUser_oversampleExtraBitsCount))) {
+			t += Config::tempAdcGpioPort.readSync();
+		}
+		t >>= Config::AdcUser_oversampleExtraBitsCount;
 		Config::tempAdcGpioVccPort.off();
 
 		if(AdcUser_checkWrongValue(t)) {

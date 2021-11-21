@@ -23,16 +23,21 @@ namespace App { namespace Config {
 		hlDisplayDataCharIndex = 3,
 	};
 
+	typedef FU16 AdcUser_RunningAvgSumType;
+	
 	enum {
-		AdcUser_adcsSize = 32,
+		AdcUser_adcsSize = 16,
+		AdcUser_oversampleExtraBitsCount = 2,
 
-		AdcUser_minValue = 100,
-		AdcUser_maxValue = 1000,
+		AdcUser_minValue = (100 << AdcUser_oversampleExtraBitsCount),
+		AdcUser_maxValue = (1000 << AdcUser_oversampleExtraBitsCount),
 	};
 
 	enum {
 		renderTempTask_freqAprox = 1600UL,
 	};
+	
+	static_assert_lt(UIntMax(AdcUser_adcsSize) * (::Bga::Mcu::Hal::Adc_maxValue << AdcUser_oversampleExtraBitsCount), (UIntMax(1) << sizeof(AdcUser_RunningAvgSumType) * 8));
 
 	enum {
 		MinMaxRollingBinaryTreeFinder_dayPeriod_ms = 60UL * 60 * 24 * 1000,
