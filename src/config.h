@@ -79,8 +79,8 @@ namespace App { namespace Config {
 	};
 
 	struct DebugEnableTest {
-		Pin::PushPull<(::STM8S_StdPeriph_Lib::GPIOD_BaseAddress), 2> m_gndPin;
-		Pin::PullUp<(::STM8S_StdPeriph_Lib::GPIOD_BaseAddress), 3> m_pullUpPin;
+		Pin::PushPull<(::STM8S_StdPeriph_Lib::GPIOB_BaseAddress), 4> m_gndPin;
+		Pin::PullUp<(::STM8S_StdPeriph_Lib::GPIOA_BaseAddress), 1> m_pullUpPin;
 	} debugEnableTest;
 
 	Pin::AdcWithEnable<(::STM8S_StdPeriph_Lib::GPIOD_BaseAddress), 6, 6, 24 /* us */> tempAdcGpioPort;
