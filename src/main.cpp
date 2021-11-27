@@ -180,7 +180,8 @@ FU16 get10Power(FU16 x, FU16 max) {
 	return ret;
 }
 
-typedef FI16 FI10_6;
+typedef FI16 FTempK10_6;
+typedef I16 TempK10_6;
 typedef U8 U2_6;
 
 typedef U16 Um9_25;
@@ -320,7 +321,7 @@ void displayTemp(FI16 x, FU8* dest) {
 
 
 enum { lastTemp_notFilledMagicNumber = 0x7FFE };
-FI10_6 lastTemp = lastTemp_notFilledMagicNumber;
+FTempK10_6 lastTemp = lastTemp_notFilledMagicNumber;
 
 
 FU16 ticksCountLive = 0;
@@ -351,7 +352,7 @@ void displayTask() {
 	extern MeasureThread_Scheduler scheduler;
 
 	struct A {
-		static inline void convertAndDisplayRawTemp(FI16 x, FU8* dest) {
+		static inline void convertAndDisplayRawTemp(FTempK10_6 x, FU8* dest) {
 			displayTemp(User_convertTemperature((FI32(x) * 10) >> 6), dest);
 		}
 	};
@@ -407,7 +408,7 @@ void displayTask() {
 		else {
 			FU16 adcAvg = tempAdcRunningAvg.computeAvg();
 			FU16 rT = rrToRl(adcAvg, settings.rDiv);
-			FI10_6 temp = settings.tempAdcFix.m_ntcThermistor.convert(rT);
+			FTempK10_6 temp = settings.tempAdcFix.m_ntcThermistor.convert(rT);
 
 			if(lastTemp == lastTemp_notFilledMagicNumber || settings.tempHysteresis < Math_abs(temp - lastTemp)) {
 				lastTemp = temp;
@@ -429,12 +430,12 @@ void displayTask() {
 		HLDisplayData_l30,
 	};
 
-	const FI10_6 HLDisplayData_notFilledMagic = FI10_6(0x8000);
+	const FTempK10_6 HLDisplayData_notFilledMagic = FTempK10_6(0x8000);
 
 
 	struct HLDisplayData {
 		const char name[3];
-		FI16 temp;
+		FTempK10_6 temp;
 	} hlDisplayData[6] = {
 		[HLDisplayData_h1] = { { _7SegmentsFont::H, _7SegmentsFont::d1, 0  }, HLDisplayData_notFilledMagic },
 		[HLDisplayData_l1] = { { _7SegmentsFont::L, _7SegmentsFont::d1, 0  }, 222 },
@@ -485,7 +486,7 @@ void displayTask() {
 		typedef FU16 Index;
 		typedef FU8 SubIndex;
 		typedef FU8 Level;
-		typedef I16 DataValue;
+		typedef TempK10_6 DataValue;
 	};
 
 	enum {
