@@ -340,7 +340,7 @@ void displayTask() {
 	#endif // 1
 }
 
-namespace MeasureThread {
+//namespace MeasureThread {
 
 	struct TaskArgs {
 
@@ -581,7 +581,7 @@ namespace MeasureThread {
 		#endif
 	};
 	MeasureThread_Scheduler scheduler(tasks, arraySize(tasks));
-}
+//}
 
 void timerThread(Timer& timer) {
 	timer.clearPendingInterrupt();
@@ -589,7 +589,7 @@ void timerThread(Timer& timer) {
 	displayTask();
 	sysClockTask();
 
-	using namespace MeasureThread;
+//	using namespace MeasureThread;
 
 	FU16 ticksCount = ticksCountLive;
 
