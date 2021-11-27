@@ -54,6 +54,7 @@ namespace App { namespace Config {
 
 		MinMaxRollingBinaryTreeFinder_forceUpdateLog2 = 4,
 
+		MinMaxRollingBinaryTreeFinder_resetEepromDataHoldDebugButtonDelayMin_ms = 5000, 
 	};
 
 	using namespace ::Bga::Mcu::Hal;

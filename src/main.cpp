@@ -33,6 +33,7 @@
 #include <!mcu/Sensor/Analog/NtcThermistor.h>
 
 #include <!hal/Adc.h>
+#include <!hal/Eeprom.h>
 #include <!hal/Pin/PushPull.h>
 #include <!hal/Pin/PullHiZ.h>
 #include <!hal/Pin/PullUp.h>
@@ -191,6 +192,24 @@ enum TemperatureType {
 	TemperatureType_fahrenheit,
 };
 
+struct MinMaxRollingBinaryTreeFinder_Store {
+	struct {
+		Math::MinMax<TempK10_6> weekMinMaxTempCircularBuffer_data[7];
+		Math::MinMax<TempK10_6> monthMinMaxTempCircularBuffer_data[4];
+		U8 weekMinMaxTempCircularBuffer_index;
+		U8 monthMinMaxTempCircularBuffer_index;
+	} data;
+	//# TODO validate it
+	U16 crc;
+	
+	void init() {
+		this->data.weekMinMaxTempCircularBuffer_index = -1; 
+		this->data.monthMinMaxTempCircularBuffer_index = -1;
+	}
+	void readToRam(MinMaxRollingBinaryTreeFinder_Store const& eepromSrc);
+	void writeToEeprom(MinMaxRollingBinaryTreeFinder_Store& eepromDest);
+};
+
 struct Settings {
 	struct AdcUserFix {
 		::Bga::Mcu::Sensor::Analog::NtcThermistor<U16> m_ntcThermistor;
@@ -208,7 +227,12 @@ struct Settings {
 		U16 valueDisplayEndTime;
 	} hlDisplayData;
 	/* TemperatureType */ U8 temperatureType;
+	//# TODO automatic calculation of gap
+	U8 BGA__UNIQUE_NAME[2]; //# align gap to 4 bytes
+	MinMaxRollingBinaryTreeFinder_Store MinMaxRollingBinaryTreeFinder_store; 
 };
+
+static_assert_test(offsetof(Settings, MinMaxRollingBinaryTreeFinder_store), x % 4 == 0);
 
 STM8S_STDPERIPH_LIB__EEPROM const Settings defaultSettings = {
 	.tempAdcFix = {
@@ -227,6 +251,7 @@ STM8S_STDPERIPH_LIB__EEPROM const Settings defaultSettings = {
 	}
 };
 Settings const& settings = ((Settings*)(&defaultSettings))[0];
+Settings& settingsRw = ((Settings*)(&defaultSettings))[0];
 
 FU16 rrToRh(FU16 adc, FU16 rL) {
 	return FU32(rL) * (Adc_maxValueOversampled - adc) / adc;
@@ -506,11 +531,25 @@ void displayTask() {
 	typedef MinMaxRollingBinaryTreeFinder::MinMaxD MinMaxRollingBinaryTreeFinder_MinMaxD;
 	MinMaxRollingBinaryTreeFinder minMaxRollingBinaryTreeFinder;
 
-	MinMaxRollingBinaryTreeFinder_MinMaxD weekMinMaxTempCircularBuffer_data[7];
-	CircularBuffer_Dynamic<MinMaxRollingBinaryTreeFinder_MinMaxD, FU8> weekMinMaxTempCircularBuffer(weekMinMaxTempCircularBuffer_data, arraySize(weekMinMaxTempCircularBuffer_data));
-	MinMaxRollingBinaryTreeFinder_MinMaxD monthMinMaxTempCircularBuffer_data[4];
-	CircularBuffer_Dynamic<MinMaxRollingBinaryTreeFinder_MinMaxD, FU8> monthMinMaxTempCircularBuffer(monthMinMaxTempCircularBuffer_data, arraySize(monthMinMaxTempCircularBuffer_data));
+	MinMaxRollingBinaryTreeFinder_Store MinMaxRollingBinaryTreeFinder_store;
+	
+	CircularBuffer_Dynamic<MinMaxRollingBinaryTreeFinder_MinMaxD, FU8> weekMinMaxTempCircularBuffer(MinMaxRollingBinaryTreeFinder_store.data.weekMinMaxTempCircularBuffer_data, arraySize(MinMaxRollingBinaryTreeFinder_store.data.weekMinMaxTempCircularBuffer_data));
+	CircularBuffer_Dynamic<MinMaxRollingBinaryTreeFinder_MinMaxD, FU8> monthMinMaxTempCircularBuffer(MinMaxRollingBinaryTreeFinder_store.data.monthMinMaxTempCircularBuffer_data, arraySize(MinMaxRollingBinaryTreeFinder_store.data.monthMinMaxTempCircularBuffer_data));
 
+	void MinMaxRollingBinaryTreeFinder_Store::readToRam(MinMaxRollingBinaryTreeFinder_Store const& eepromSrc) {
+		Eeprom_read(*this, eepromSrc);
+		weekMinMaxTempCircularBuffer.index = this->data.weekMinMaxTempCircularBuffer_index;
+		monthMinMaxTempCircularBuffer.index = this->data.monthMinMaxTempCircularBuffer_index;
+	}
+	void MinMaxRollingBinaryTreeFinder_Store::writeToEeprom(MinMaxRollingBinaryTreeFinder_Store& eepromDest) {
+		this->data.weekMinMaxTempCircularBuffer_index = weekMinMaxTempCircularBuffer.index; 
+		this->data.monthMinMaxTempCircularBuffer_index = monthMinMaxTempCircularBuffer.index;
+		//# change it to { Eeprom_write1 } if out of flash memory. -192 bytes but 4x slower write  
+		Eeprom_writeFast32(eepromDest, *this);
+//		Eeprom_write(eepromDest, *this);
+	}
+	
+	
 
 	MinMaxRollingBinaryTreeFinder_MinMaxD CircularBuffer_addMinMax(const MinMaxRollingBinaryTreeFinder_MinMaxD& minMax, CircularBuffer_Dynamic<MinMaxRollingBinaryTreeFinder_MinMaxD, FU8>& circularBuffer) {
 		if(circularBuffer.initAndPrefill(minMax)) {
@@ -550,6 +589,8 @@ void displayTask() {
 
 				hlDisplayData[HLDisplayData_h30].temp = monthMinMaxTemp.max;
 				hlDisplayData[HLDisplayData_l30].temp = monthMinMaxTemp.min;
+
+				MinMaxRollingBinaryTreeFinder_store.writeToEeprom(settingsRw.MinMaxRollingBinaryTreeFinder_store);
 			};
 			#endif
 
@@ -651,6 +692,8 @@ void main() {
 	Clock_setCpuFullSpeed();
 	Hw_enable();
 	
+	Bool didEepromReset = false;
+	
 	#if 1
 	Config::debugEnableTest.m_gndPin.init();
 	Config::debugEnableTest.m_pullUpPin.init();
@@ -658,9 +701,16 @@ void main() {
 	if(serviceModePinShortageTime_ms == 0) {
 		//# normal mode
 	}
+	else if(Config::MinMaxRollingBinaryTreeFinder_resetEepromDataHoldDebugButtonDelayMin_ms <= serviceModePinShortageTime_ms) {
+		MinMaxRollingBinaryTreeFinder_store.init();
+		MinMaxRollingBinaryTreeFinder_store.writeToEeprom(settingsRw.MinMaxRollingBinaryTreeFinder_store);
+		didEepromReset = true;
+	}
 	else {
 		isDebugMode = true;
 	};
+	
+	MinMaxRollingBinaryTreeFinder_store.readToRam(settingsRw.MinMaxRollingBinaryTreeFinder_store);
 	#endif // 0
 	
 	display.init();
@@ -669,7 +719,12 @@ void main() {
 	forInc(FU8, i, 0, 6) {
 		display.displayChars[i] = (i < 3) ? _7SegmentsFont::digits[i] : 0;
 	}
-
+	
+	if(didEepromReset) {
+		display.displayChars[0] = _7SegmentsFont::C;
+		display.updateManual(0);
+		delay_ms(1500);
+	};
 
 //	displaySoftError(12, &(display.displayChars[0]));
 //	displayTemp(FI10_6(4.2 * (1UL << 6)), &(display.displayChars[0]));

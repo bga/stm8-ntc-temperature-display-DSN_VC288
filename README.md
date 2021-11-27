@@ -5,7 +5,8 @@ TODO
  - [x] basic temp show
  - [x] celsius/farheheit switch(eeprom setting)
  - [x] min/max show for day/week/month
- - [ ] save min/max to eeprom to restore after reboot
+ - [x] save min/max to eeprom to restore after reboot
+ - [x] reset min/max eeprom data by holding debug mode button at least 5 sec (user definable) at boot
  - [ ] data ir/433MHz transmitting(cathode + npn bjt when digit shows nothing)
  - [x] debug mode - enable by shorting 2 pins before power on. Show raw adc data
 
