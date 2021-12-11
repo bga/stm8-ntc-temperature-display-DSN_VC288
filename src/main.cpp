@@ -192,6 +192,60 @@ enum TemperatureType {
 	TemperatureType_fahrenheit,
 };
 
+
+template<class ConfigArg>
+struct Crc8_Nibble_OneTable {
+	typedef ConfigArg Config;
+	Config config;
+	
+	typedef U8 CrcValue;
+	
+	FU8 crc;
+	
+	void init() {
+		this->crc = FU8(-1);
+	}
+	//# [https://github.com/pebble/ArduinoPebbleSerial/blob/master/utility/crc.c]
+	//# MIT license
+	private: FU8 updateCrc(const FU8 data, FU8 crc) const {
+		for(FU8 i = 2; i > 0; i--) {
+			FU8 nibble = data;
+			if(i % 2 == 0) {
+				nibble >>= 4;
+			};
+			FU8 index = nibble ^ (crc >> 4);
+			crc = this->config.lookupTable[index & 0xf] ^ (crc << 4);
+		}
+		
+		return crc;
+	}
+	public: void add(const FU8 data) {
+		this->crc = this->updateCrc(data, this->crc);
+	}
+	
+	FU8 getResult() const {
+		return this->updateCrc(FU8(-1), this->crc);
+	}
+};
+
+struct Crc8_Config {
+	//# Optimal polynomial chosen based on
+	//# http://users.ece.cmu.edu/~koopman/roses/dsn04/koopman04_crc_poly_embedded.pdf
+	//# Note that this is different than the standard CRC-8 polynomial, because the
+	//# standard CRC-8 polynomial is not particularly good.
+	//# nibble lookup table for (x^8 + x^5 + x^3 + x^2 + x + 1)
+	static const FU8 lookupTable[16]; /* = {
+		0, 47, 94, 113, 188, 147, 226, 205, 87, 120, 9, 38, 235, 196,
+		181, 154
+	}; */
+};
+const FU8 Crc8_Config::lookupTable[16] = {
+	0, 47, 94, 113, 188, 147, 226, 205, 87, 120, 9, 38, 235, 196,
+	181, 154
+};
+
+typedef Crc8_Nibble_OneTable<Crc8_Config> Crc;
+
 struct MinMaxRollingBinaryTreeFinder_Store {
 	struct {
 		Math::MinMax<TempK10_6> weekMinMaxTempCircularBuffer_data[7];
@@ -200,15 +254,32 @@ struct MinMaxRollingBinaryTreeFinder_Store {
 		U8 monthMinMaxTempCircularBuffer_index;
 	} data;
 	//# TODO validate it
-	U16 crc;
+	Crc::CrcValue crc;
+	U8 BGA__UNIQUE_NAME[1];
 	
 	void init() {
 		this->data.weekMinMaxTempCircularBuffer_index = -1; 
 		this->data.monthMinMaxTempCircularBuffer_index = -1;
 	}
-	void readToRam(MinMaxRollingBinaryTreeFinder_Store const& eepromSrc);
+	
+	enum Read_ErrorCode {
+		Read_ErrorCode_ok, 
+		Read_ErrorCode_invalidCrc, 
+	};
+	Crc::CrcValue calcCrc() const {
+		Crc crc;
+		crc.init();
+		forInc(FU8, i, 0, sizeof(this->data)) {
+			crc.add(reinterpret_cast<U8 const*>(&(this->data))[i]);
+		}
+		return crc.getResult();
+	}
+	Read_ErrorCode readToRam(MinMaxRollingBinaryTreeFinder_Store const& eepromSrc);
 	void writeToEeprom(MinMaxRollingBinaryTreeFinder_Store& eepromDest);
 };
+
+//# 4 bytes aligned
+static_assert_test(sizeof(MinMaxRollingBinaryTreeFinder_Store), x % 4 == 0);
 
 struct Settings {
 	struct AdcUserFix {
@@ -536,14 +607,19 @@ void displayTask() {
 	CircularBuffer_Dynamic<MinMaxRollingBinaryTreeFinder_MinMaxD, FU8> weekMinMaxTempCircularBuffer(MinMaxRollingBinaryTreeFinder_store.data.weekMinMaxTempCircularBuffer_data, arraySize(MinMaxRollingBinaryTreeFinder_store.data.weekMinMaxTempCircularBuffer_data));
 	CircularBuffer_Dynamic<MinMaxRollingBinaryTreeFinder_MinMaxD, FU8> monthMinMaxTempCircularBuffer(MinMaxRollingBinaryTreeFinder_store.data.monthMinMaxTempCircularBuffer_data, arraySize(MinMaxRollingBinaryTreeFinder_store.data.monthMinMaxTempCircularBuffer_data));
 
-	void MinMaxRollingBinaryTreeFinder_Store::readToRam(MinMaxRollingBinaryTreeFinder_Store const& eepromSrc) {
+	MinMaxRollingBinaryTreeFinder_Store::Read_ErrorCode MinMaxRollingBinaryTreeFinder_Store::readToRam(MinMaxRollingBinaryTreeFinder_Store const& eepromSrc) {
 		Eeprom_read(*this, eepromSrc);
 		weekMinMaxTempCircularBuffer.index = this->data.weekMinMaxTempCircularBuffer_index;
 		monthMinMaxTempCircularBuffer.index = this->data.monthMinMaxTempCircularBuffer_index;
+		if(this->calcCrc() != this->crc) {
+			return Read_ErrorCode_invalidCrc;
+		};
+		return Read_ErrorCode_ok;
 	}
 	void MinMaxRollingBinaryTreeFinder_Store::writeToEeprom(MinMaxRollingBinaryTreeFinder_Store& eepromDest) {
 		this->data.weekMinMaxTempCircularBuffer_index = weekMinMaxTempCircularBuffer.index; 
 		this->data.monthMinMaxTempCircularBuffer_index = monthMinMaxTempCircularBuffer.index;
+		this->crc = this->calcCrc();
 		//# change it to { Eeprom_write1 } if out of flash memory. -192 bytes but 4x slower write  
 		Eeprom_writeFast32(eepromDest, *this);
 //		Eeprom_write(eepromDest, *this);
@@ -692,7 +768,7 @@ void main() {
 	Clock_setCpuFullSpeed();
 	Hw_enable();
 	
-	Bool didEepromReset = false;
+	FU8 errorCode = 0;
 	
 	#if 1
 	Config::debugEnableTest.m_gndPin.init();
@@ -704,13 +780,21 @@ void main() {
 	else if(Config::MinMaxRollingBinaryTreeFinder_resetEepromDataHoldDebugButtonDelayMin_ms <= serviceModePinShortageTime_ms) {
 		MinMaxRollingBinaryTreeFinder_store.init();
 		MinMaxRollingBinaryTreeFinder_store.writeToEeprom(settingsRw.MinMaxRollingBinaryTreeFinder_store);
-		didEepromReset = true;
+		errorCode = _7SegmentsFont::C;
 	}
 	else {
 		isDebugMode = true;
 	};
 	
-	MinMaxRollingBinaryTreeFinder_store.readToRam(settingsRw.MinMaxRollingBinaryTreeFinder_store);
+	switch(MinMaxRollingBinaryTreeFinder_store.readToRam(settingsRw.MinMaxRollingBinaryTreeFinder_store)) {
+		case(MinMaxRollingBinaryTreeFinder_Store::Read_ErrorCode_invalidCrc): {
+			MinMaxRollingBinaryTreeFinder_store.init();
+			errorCode = _7SegmentsFont::E;
+		} break;
+		default: {
+			
+		}
+	}
 	#endif // 0
 	
 	display.init();
@@ -720,8 +804,8 @@ void main() {
 		display.displayChars[i] = (i < 3) ? _7SegmentsFont::digits[i] : 0;
 	}
 	
-	if(didEepromReset) {
-		display.displayChars[0] = _7SegmentsFont::C;
+	if(errorCode != 0) {
+		display.displayChars[0] = errorCode;
 		display.updateManual(0);
 		delay_ms(1500);
 	};
