@@ -17,6 +17,10 @@
 #pragma once
 
 
+#define CONFIG__EEPROM_STORE_METHOD switch
+#define CONFIG__WRITE_BACKUP_TO_EEPROM BGA__CONCAT(writeBackupToEeprom_, CONFIG__EEPROM_STORE_METHOD)
+#define CONFIG__READ_BACKUP_TO_RAM BGA__CONCAT(readBackupToRam_, CONFIG__EEPROM_STORE_METHOD)
+
 namespace App { namespace Config {
 	enum {
 		tempDisplayCharIndex = 0,
