@@ -55,7 +55,7 @@ struct Self<U16> {
 		data[1][2] * 2 ** 25;
 	#endif // 0
 	
-	FI10_6 convert(U16 r_ohm) const {
+	FI10_6 convert(FU32 r_ohm) const {
 		//# accepted range - 3.25
 		FU32 ratio = ((FU32(r_ohm) << 16) /* 16.16 */ / m_rIce_ohm /* 16.0 */) /* 16.16 */;
 		FI16 logR = Math::Fp::log2fix(U16(ratio >> 4 /* 18.14 */) /* 2.14 */, 16 - 4) /* 4.12 */;

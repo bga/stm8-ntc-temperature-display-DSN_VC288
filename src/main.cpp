@@ -409,11 +409,11 @@ STM8S_STDPERIPH_LIB__EEPROM const Settings defaultSettings = {
 Settings const& settings = ((Settings*)(&defaultSettings))[0];
 Settings& settingsRw = ((Settings*)(&defaultSettings))[0];
 
-FU16 rrToRh(FU16 adc, FU16 rL) {
+FU32 rrToRh(FU16 adc, FU16 rL) {
 	return FU32(rL) * (Adc_maxValueOversampled - adc) / adc;
 //	return rL * (Adc_maxValue / adc - 1);
 }
-FU16 rrToRl(FU16 adc, FU16 rH) {
+FU32 rrToRl(FU16 adc, FU16 rH) {
 	return FU32(rH) * adc / (Adc_maxValueOversampled - adc);
 }
 
@@ -588,7 +588,7 @@ void displayTask() {
 		}
 		else {
 			FU16 adcAvg = tempAdcRunningAvg.computeAvg();
-			FU16 rT = rrToRl(adcAvg, settings.rDiv);
+			FU32 rT = rrToRl(adcAvg, settings.rDiv);
 			FTempK10_6 temp = settings.tempAdcFix.m_ntcThermistor.convert(rT);
 
 			if(lastTemp == lastTemp_notFilledMagicNumber || settings.tempHysteresis < Math_abs(temp - lastTemp)) {
