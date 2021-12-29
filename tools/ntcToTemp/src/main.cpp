@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <!cpp/Math/Fp/log2fix.h>
 #include <!cpp/common.h>
-#include <!mcu/Sensor/Analog/NtcThermistor.h>
+#include "../../../common-src/NtcThermistor.h"
 
 const char* const help = (""
 	"\n"   "%s rIce_ohm oneDivB r_ohm"

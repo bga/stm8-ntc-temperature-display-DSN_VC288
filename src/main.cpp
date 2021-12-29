@@ -30,7 +30,7 @@
 #include <delay.h>
 
 #include <!mcu/Display/Text/_7Segment/_7Segment_CommonCathode.h>
-#include <!mcu/Sensor/Analog/NtcThermistor.h>
+#include "../common-src/NtcThermistor.h"
 
 #include <!hal/Adc.h>
 #include <!hal/Eeprom.h>
