@@ -679,6 +679,7 @@ void displayTask() {
 			#endif
 		),
 		MinMaxRollingBinaryTreeFinder_forceUpdateLog2 = Config::MinMaxRollingBinaryTreeFinder_forceUpdateLog2,
+		MinMaxRollingBinaryTreeFinder_forceSaveLog2 = Config::MinMaxRollingBinaryTreeFinder_forceSaveLog2,
 	};
 
 	FU16 MinMaxRollingBinaryTreeFinder_ticksCount = 0;
@@ -824,8 +825,14 @@ void displayTask() {
 		MinMaxRollingBinaryTreeFinder_MinMaxD tempMinMax = minMaxRollingBinaryTreeFinder.addValue(lastTemp, minMaxRollingBinaryTreeFinder.levelMax - MinMaxRollingBinaryTreeFinder_forceUpdateLog2);
 		if(minMaxRollingBinaryTreeFinder.isCarry(MinMaxRollingBinaryTreeFinder_forceUpdateLog2)) {
 			#if 1
-			if(HLDisplayData_isNotFilled() || minMaxRollingBinaryTreeFinder.isCarry(0)) {
-				MinMaxRollingBinaryTreeFinder_MinMaxD weekMinMaxTemp = CircularBuffer_addMinMax(tempMinMax, weekMinMaxTempCircularBuffer);
+			if(HLDisplayData_isNotFilled() || minMaxRollingBinaryTreeFinder.isCarry(MinMaxRollingBinaryTreeFinder_forceSaveLog2)) {
+				weekMinMaxTempCircularBuffer.initAndPrefill(tempMinMax);
+				weekMinMaxTempCircularBuffer.setCurrent(tempMinMax);
+				if(minMaxRollingBinaryTreeFinder.isCarry(0)) {
+					weekMinMaxTempCircularBuffer.cycleIndex();
+				};
+				
+				MinMaxRollingBinaryTreeFinder_MinMaxD weekMinMaxTemp = MinMaxRollingBinaryTreeFinder_MinMaxD::fromArray(weekMinMaxTempCircularBuffer.data, weekMinMaxTempCircularBuffer.size);
 				hlDisplayData[HLDisplayData_h7].temp = weekMinMaxTemp.max;
 				hlDisplayData[HLDisplayData_l7].temp = weekMinMaxTemp.min;
 

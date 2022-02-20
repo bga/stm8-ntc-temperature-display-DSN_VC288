@@ -57,6 +57,7 @@ namespace App { namespace Config {
 		),
 
 		MinMaxRollingBinaryTreeFinder_forceUpdateLog2 = 4,
+		MinMaxRollingBinaryTreeFinder_forceSaveLog2 = 3,
 
 		MinMaxRollingBinaryTreeFinder_resetEepromDataHoldDebugButtonDelayMin_ms = 5000, 
 	};
