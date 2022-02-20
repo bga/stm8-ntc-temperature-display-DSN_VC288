@@ -1,7 +1,11 @@
 #include <stdio.h>
+#include <iostream>
 #include <stdlib.h>
 #include <!cpp/Math/Fp/log2fix.h>
 #include <!cpp/common.h>
+
+#define BGA__MCU__SENSOR__ANALOG__NTC_THERMISTOR__DEBUG_INPECT(exprArg) ::std::cerr << BGA__STR(exprArg) << " = " << (exprArg) << :: std::endl;
+
 #include "../../../common-src/NtcThermistor.h"
 
 const char* const help = (""
