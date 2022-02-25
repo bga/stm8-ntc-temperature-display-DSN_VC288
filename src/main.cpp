@@ -838,7 +838,7 @@ void displayTask() {
 
 				monthMinMaxTempCircularBuffer.initAndPrefill(weekMinMaxTemp);
 
-				if(weekMinMaxTempCircularBuffer.isCarry()) {
+				if(minMaxRollingBinaryTreeFinder.isCarry(0) && weekMinMaxTempCircularBuffer.isCarry()) {
 					monthMinMaxTempCircularBuffer.cycleIndex();
 				};
 				monthMinMaxTempCircularBuffer.setCurrent(weekMinMaxTemp);
