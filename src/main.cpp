@@ -772,10 +772,10 @@ void displayTask() {
 		 } break;
 		  case(3): {
 				if(FU8(eepromDests[1].data.id - eepromDests[0].data.id) < FU8(eepromDests[0].data.id - eepromDests[1].data.id)) {
-					return 0;
+					return 1;
 				}
 				else {
-					return 1;
+					return 0;
 				}
 			} break;
 			default: {
