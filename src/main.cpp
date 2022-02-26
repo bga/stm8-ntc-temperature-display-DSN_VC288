@@ -116,7 +116,7 @@ struct  Timer: public Timer4<Config::renderTempTask_freqAprox> {
 
 } timer;
 
-#define msToTicksCount(msArg) (Timer::ticksCountPerSReal * (msArg) / 1000UL)
+#define msToTicksCount(msArg) (UIntMax(Timer::ticksCountPerSReal) * (msArg) / 1000UL)
 
 void timerThread(Timer& timer);
 BGA__MCU__HAL__ISR(STM8S_STDPERIPH_LIB__TIM4_ISR) {
